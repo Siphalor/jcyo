@@ -1,6 +1,10 @@
 plugins {
 	`java-library`
+	id("de.siphalor.jcyo.publishing")
 }
+
+group = rootProject.group
+version = rootProject.version
 
 repositories {
 	mavenCentral()
@@ -12,6 +16,8 @@ dependencies {
 	testAnnotationProcessor(libs.lombok)
 	testCompileOnly(libs.lombok)
 
+	implementation(libs.acl)
+
 	compileOnly(libs.jetbrains.annotations)
 	compileOnly(libs.jspecify.annotations)
 
@@ -21,6 +27,10 @@ dependencies {
 	testImplementation(libs.assertj)
 }
 
+java {
+	withSourcesJar()
+}
+
 tasks.test {
 	useJUnitPlatform()
 	systemProperties(
@@ -28,4 +38,12 @@ tasks.test {
 		"junit.jupiter.execution.timeout.testable.method.default" to "10s",
 		"junit.jupiter.execution.timeout.thread.mode.default" to "SEPARATE_THREAD",
 	)
+}
+
+publishing {
+	publications {
+		create<MavenPublication>("jar") {
+			from(components.getByName("java"))
+		}
+	}
 }

@@ -140,4 +140,19 @@ class JcyoExpressionEvaluatorTest {
 		));
 		assertThat(result).isEqualTo(new JcyoNumber(3));
 	}
+
+	@Test
+	@SneakyThrows
+	void variableStringEquality() {
+		JcyoVariables variables = new JcyoVariables();
+		variables.set("test", new JcyoString("hello"));
+		JcyoExpressionEvaluator evaluator = new JcyoExpressionEvaluator(variables);
+
+		JcyoValue result = evaluator.evaluate(new JcyoBinaryOperator(
+				JcyoBinaryOperator.Type.EQUAL,
+				new JcyoVariableReference("TEST"),
+				new JcyoConstant(new JcyoString("hello"))
+		));
+		assertThat(result).isEqualTo(new JcyoBoolean(true));
+	}
 }

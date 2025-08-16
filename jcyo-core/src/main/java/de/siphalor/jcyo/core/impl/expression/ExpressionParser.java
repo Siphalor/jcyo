@@ -99,7 +99,7 @@ public class ExpressionParser {
 			case StringLiteralToken(String raw) -> {
 				tokenStream.nextToken();
 				var sb = new StringBuilder();
-				int end = raw.length() - 2;
+				int end = raw.length() - 1;
 				for (int i = 1; i < end; i++) {
 					char c = raw.charAt(i);
 					if (c == '\\') {

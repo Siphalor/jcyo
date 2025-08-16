@@ -1,20 +1,38 @@
 package de.siphalor.jcyo.core.impl.expression;
 
 import de.siphalor.jcyo.core.api.value.JcyoNumber;
+import de.siphalor.jcyo.core.api.value.JcyoString;
 import de.siphalor.jcyo.core.impl.stream.PeekableTokenStream;
 import de.siphalor.jcyo.core.impl.stream.TokenStream;
 import de.siphalor.jcyo.core.impl.token.NumberLiteralToken;
 import de.siphalor.jcyo.core.impl.token.OperatorToken;
+import de.siphalor.jcyo.core.impl.token.StringLiteralToken;
 import de.siphalor.jcyo.core.impl.token.WhitespaceToken;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class ExpressionParserTest {
+
+	@ParameterizedTest
+	@ValueSource(strings = {"", "hi"})
+	void stringLiteral(String string) {
+		ExpressionParser parser = new ExpressionParser(new PeekableTokenStream(TokenStream.from(List.of(
+				new WhitespaceToken(" "),
+				new StringLiteralToken("\"" + string + "\""),
+				new WhitespaceToken(" ")
+		))));
+
+		JcyoExpression expression = parser.nextExpression();
+
+		assertThat(expression).isEqualTo(new JcyoConstant(new JcyoString(string)));
+	}
+
 	@ParameterizedTest
 	@CsvSource({
 			"-,MINUS",
