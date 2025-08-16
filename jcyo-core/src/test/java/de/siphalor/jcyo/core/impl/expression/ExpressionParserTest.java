@@ -1,6 +1,6 @@
 package de.siphalor.jcyo.core.impl.expression;
 
-import de.siphalor.jcyo.core.impl.expression.value.JcyoNumber;
+import de.siphalor.jcyo.core.api.value.JcyoNumber;
 import de.siphalor.jcyo.core.impl.stream.PeekableTokenStream;
 import de.siphalor.jcyo.core.impl.stream.TokenStream;
 import de.siphalor.jcyo.core.impl.token.NumberLiteralToken;

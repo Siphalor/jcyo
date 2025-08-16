@@ -2,6 +2,7 @@ package de.siphalor.jcyo.core.impl;
 
 import de.siphalor.jcyo.core.api.JcyoOptions;
 import de.siphalor.jcyo.core.api.JcyoVariables;
+import de.siphalor.jcyo.core.api.value.JcyoBoolean;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -23,8 +24,10 @@ class JcyoProcessorTest {
 	@Test
 	@SneakyThrows
 	void processSimple() {
+		JcyoVariables variables = new JcyoVariables();
+		variables.set("Test", new JcyoBoolean(false));
 		JcyoProcessor processor = new JcyoProcessor(
-				new JcyoVariables(),
+				variables,
 				JcyoOptions.builder().updateInput(true).build(),
 				inputDir,
 				cleanOutputDir
@@ -40,7 +43,7 @@ class JcyoProcessorTest {
 					
 					class Test {
 						public void test() {
-							//# if true
+							//# if !test
 							//- Helper.test();
 							//# else
 							Utils.test();
@@ -60,7 +63,7 @@ class JcyoProcessorTest {
 			
 				class Test {
 					public void test() {
-						//# if true
+						//# if !test
 						Helper.test();
 						//# else
 						//- Utils.test();

@@ -2,8 +2,9 @@ package de.siphalor.jcyo.core.impl.expression;
 
 import de.siphalor.jcyo.core.api.JcyoProcessingException;
 import de.siphalor.jcyo.core.api.JcyoVariables;
-import de.siphalor.jcyo.core.impl.expression.value.*;
+import de.siphalor.jcyo.core.api.value.*;
 import lombok.SneakyThrows;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -58,7 +59,7 @@ class JcyoExpressionEvaluatorTest {
 	static Stream<Arguments> unaryNotParams() {
 		return Stream.of(
 				arguments(new JcyoUndefined("test"), true),
-				arguments(new JcyoString(""), true),
+				arguments(new JcyoString(""), false),
 				arguments(new JcyoString("hi"), false),
 				arguments(new JcyoBoolean(false), true),
 				arguments(new JcyoBoolean(true), false),
@@ -122,5 +123,21 @@ class JcyoExpressionEvaluatorTest {
 				new JcyoString("hi"),
 				new JcyoBoolean(true)
 		);
+	}
+
+	@Test
+	@SneakyThrows
+	void additionWithVariableReferences() {
+		JcyoVariables variables = new JcyoVariables();
+		variables.set("a", new JcyoNumber(1));
+		variables.set("b", new JcyoNumber(2));
+		JcyoExpressionEvaluator evaluator = new JcyoExpressionEvaluator(variables);
+
+		JcyoValue result = evaluator.evaluate(new JcyoBinaryOperator(
+				JcyoBinaryOperator.Type.PLUS,
+				new JcyoVariableReference("a"),
+				new JcyoVariableReference("b")
+		));
+		assertThat(result).isEqualTo(new JcyoNumber(3));
 	}
 }

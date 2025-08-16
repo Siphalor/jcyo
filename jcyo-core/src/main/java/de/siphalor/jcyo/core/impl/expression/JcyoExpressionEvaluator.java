@@ -2,7 +2,7 @@ package de.siphalor.jcyo.core.impl.expression;
 
 import de.siphalor.jcyo.core.api.JcyoProcessingException;
 import de.siphalor.jcyo.core.api.JcyoVariables;
-import de.siphalor.jcyo.core.impl.expression.value.*;
+import de.siphalor.jcyo.core.api.value.*;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
@@ -12,6 +12,7 @@ public class JcyoExpressionEvaluator {
 	public JcyoValue evaluate(JcyoExpression expression) throws JcyoProcessingException {
 		return switch (expression) {
 			case JcyoConstant(JcyoValue value) -> value;
+			case JcyoVariableReference(String name) -> variables.get(name).orElse(new JcyoUndefined(name));
 			case JcyoUnaryOperator(JcyoUnaryOperator.Type type, JcyoExpression inner) -> switch (type) {
 				case MINUS -> new JcyoNumber(-assertNumber(evaluate(inner), "in unary minus").value());
 				case NOT -> new JcyoBoolean(!evaluate(inner).truthy());

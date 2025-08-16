@@ -1,9 +1,9 @@
 package de.siphalor.jcyo.core.impl.expression;
 
 import de.siphalor.jcyo.core.impl.JcyoParseException;
-import de.siphalor.jcyo.core.impl.expression.value.JcyoBoolean;
-import de.siphalor.jcyo.core.impl.expression.value.JcyoNumber;
-import de.siphalor.jcyo.core.impl.expression.value.JcyoString;
+import de.siphalor.jcyo.core.api.value.JcyoBoolean;
+import de.siphalor.jcyo.core.api.value.JcyoNumber;
+import de.siphalor.jcyo.core.api.value.JcyoString;
 import de.siphalor.jcyo.core.impl.stream.PeekableTokenStream;
 import de.siphalor.jcyo.core.impl.token.*;
 import lombok.RequiredArgsConstructor;
@@ -39,6 +39,7 @@ public class ExpressionParser {
 		return tryParseParenthesizedExpression()
 				.or(this::tryParsePrefixedExpression)
 				.or(this::tryParseConstant)
+				.or(this::tryParseVariableReference)
 				.orElseThrow(() -> new JcyoParseException("Unexpected token " + tokenStream.peekToken()));
 	}
 
@@ -117,6 +118,20 @@ public class ExpressionParser {
 					}
 				}
 				yield Optional.of(new JcyoConstant(new JcyoString(sb.toString())));
+			}
+			default -> Optional.empty();
+		};
+	}
+
+	private Optional<JcyoVariableReference> tryParseVariableReference() {
+		return switch (tokenStream.peekToken()) {
+			case IdentifierToken identifierToken -> {
+				tokenStream.nextToken();
+				yield Optional.of(new JcyoVariableReference(identifierToken.identifier()));
+			}
+			case JavaKeywordToken keywordToken -> {
+				tokenStream.peekToken();
+				yield Optional.of(new JcyoVariableReference(keywordToken.raw()));
 			}
 			default -> Optional.empty();
 		};

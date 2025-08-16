@@ -1,8 +1,8 @@
-package de.siphalor.jcyo.core.impl.expression.value;
+package de.siphalor.jcyo.core.api.value;
 
 public record JcyoString(String value) implements JcyoValue {
 	@Override
 	public boolean truthy() {
-		return !value.isEmpty();
+		return true;
 	}
 }
