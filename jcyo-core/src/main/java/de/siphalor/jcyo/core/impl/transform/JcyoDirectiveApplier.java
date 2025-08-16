@@ -49,7 +49,7 @@ public class JcyoDirectiveApplier {
 					currentStackEntry()
 							.filter(stackEntry -> stackEntry.disabledActive() && stackEntry.commentStyle() == CommentStyle.FLEX)
 							.ifPresent(stackEntry -> {
-								result.pushToken(new JcyoDisabledEndToken(helper.disabledForFlexEnd()));
+								result.pushToken(new JcyoEndToken(helper.disabledForFlexEnd()));
 								stackEntry.disabledActive(false);
 							});
 

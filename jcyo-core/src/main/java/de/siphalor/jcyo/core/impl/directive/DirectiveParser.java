@@ -88,7 +88,7 @@ public class DirectiveParser {
 				throw new JcyoParseException("Expected a line break after full line directive");
 			}
 		} else {
-			if (!(token instanceof JcyoDirectiveEndToken)) {
+			if (!(token instanceof JcyoEndToken)) {
 				throw new JcyoParseException("Expected end of directive");
 			}
 		}

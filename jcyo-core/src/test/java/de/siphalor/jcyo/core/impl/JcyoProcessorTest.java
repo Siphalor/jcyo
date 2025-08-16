@@ -26,6 +26,7 @@ class JcyoProcessorTest {
 	void processSimple() {
 		JcyoVariables variables = new JcyoVariables();
 		variables.set("Test", new JcyoString("blub"));
+		variables.set("int_type", new JcyoString("long"));
 		JcyoProcessor processor = new JcyoProcessor(
 				variables,
 				JcyoOptions.builder().updateInput(true).build(),
@@ -42,7 +43,7 @@ class JcyoProcessorTest {
 					//- import de.siphalor.jcyo.test.something.Helper;
 					
 					class Test {
-						public void test() {
+						public void test(/*# if int_type == "long" *//*- long *//*# else */int/*# end */ test) {
 							//# if test == "blub"
 							//- Helper.test();
 							//# else
@@ -62,7 +63,7 @@ class JcyoProcessorTest {
 				import de.siphalor.jcyo.test.something.Helper;
 			
 				class Test {
-					public void test() {
+					public void test(/*# if int_type == "long" */long/*# else *//*- int *//*# end */ test) {
 						//# if test == "blub"
 						Helper.test();
 						//# else
@@ -78,7 +79,7 @@ class JcyoProcessorTest {
 				import de.siphalor.jcyo.test.something.Helper;
 			
 				class Test {
-					public void test() {
+					public void test(long test) {
 						Helper.test();
 					}
 				}

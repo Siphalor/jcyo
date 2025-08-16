@@ -28,7 +28,7 @@ class GeneratedAndDisabledTokenRemoverTest {
 				new LineBreakToken("\r"),
 				new IdentifierToken("generated"),
 				new WhitespaceToken("  "),
-				new JcyoDirectiveEndToken(""),
+				new JcyoEndToken(""),
 				endToken
 		));
 
@@ -36,5 +36,35 @@ class GeneratedAndDisabledTokenRemoverTest {
 
 		assertThat(remover.nextToken()).isSameAs(startToken);
 		assertThat(remover.nextToken()).isSameAs(endToken);
+	}
+
+	@Test
+	void removeFlexDisabledToken() {
+		TokenStream tokens = TokenStream.from(List.of(
+				new JcyoDisabledStartToken("", CommentStyle.FLEX),
+				new IdentifierToken("token"),
+				new JcyoEndToken("")
+		));
+
+		GeneratedAndDisabledTokenRemover remover = new GeneratedAndDisabledTokenRemover(tokens);
+
+		assertThat(remover.stream().toList()).isEqualTo(List.of(new IdentifierToken("token")));
+	}
+
+	@Test
+	void removeFlexDisabledTokenWithWhitespace() {
+		TokenStream tokens = TokenStream.from(List.of(
+				new JcyoDisabledStartToken("", CommentStyle.FLEX),
+				new WhitespaceToken(" "),
+				new WhitespaceToken(" "),
+				new IdentifierToken("token"),
+				new WhitespaceToken(" "),
+				new WhitespaceToken(" "),
+				new JcyoEndToken("")
+		));
+
+		GeneratedAndDisabledTokenRemover remover = new GeneratedAndDisabledTokenRemover(tokens);
+
+		assertThat(remover.stream().toList()).isEqualTo(List.of(new IdentifierToken("token")));
 	}
 }

@@ -48,10 +48,7 @@ public class JcyoLexer implements AutoCloseable, TokenStream {
 						return new JcyoDirectiveStartToken(takeFromBuffer(), CommentStyle.FLEX);
 					} else if (codepoint == options.disabledPrefix()) {
 						buffer.appendCodePoint(eat());
-						if (eatToBuffer() == '*' && peek() == '/') {
-							buffer.appendCodePoint(eat());
-							return new JcyoDisabledStartToken(takeFromBuffer(), CommentStyle.FLEX);
-						}
+						return new JcyoDisabledStartToken(takeFromBuffer(), CommentStyle.FLEX);
 					}
 					chompToMultilineCommentEnd();
 					return new PlainJavaCommentToken(takeFromBuffer());
@@ -64,8 +61,8 @@ public class JcyoLexer implements AutoCloseable, TokenStream {
 				buffer.appendCodePoint(eat());
 				if (peek() == '/') {
 					// a run-away multiline string end should always be a disabled flex comment
-					eat();
-					return new JcyoDisabledEndToken(takeFromBuffer());
+					buffer.appendCodePoint(eat());
+					return new JcyoEndToken(takeFromBuffer());
 				} else {
 					clearBuffer();
 					return new OperatorToken('*');

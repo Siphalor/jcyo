@@ -26,7 +26,7 @@ public class JcyoCommentRemover implements TokenStream {
 						whitespaceBuffer.clear();
 						chompToEndOfLine();
 					} else {
-						chompToTokenType(JcyoDirectiveEndToken.class);
+						chompToTokenType(JcyoEndToken.class);
 					}
 				}
 				case JcyoDisabledStartToken startToken -> {
@@ -34,7 +34,7 @@ public class JcyoCommentRemover implements TokenStream {
 						whitespaceBuffer.clear();
 						chompToEndOfLine();
 					} else {
-						chompToTokenType(JcyoDisabledEndToken.class);
+						chompToTokenType(JcyoEndToken.class);
 					}
 				}
 				default -> {
