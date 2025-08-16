@@ -1,6 +1,7 @@
 package de.siphalor.jcyo.core.impl.transform;
 
 import de.siphalor.jcyo.core.api.JcyoOptions;
+import de.siphalor.jcyo.core.api.JcyoProcessingException;
 import de.siphalor.jcyo.core.api.JcyoVariables;
 import de.siphalor.jcyo.core.impl.CommentStyle;
 import de.siphalor.jcyo.core.impl.JcyoHelper;
@@ -31,7 +32,7 @@ public class JcyoDirectiveApplier {
 		this.variables = variables;
 	}
 
-	public TokenStream apply(TokenStream inner) {
+	public TokenStream apply(TokenStream inner) throws JcyoProcessingException {
 		var stream = new PeekableTokenStream(inner);
 
 		TokenBuffer result = new TokenBuffer();

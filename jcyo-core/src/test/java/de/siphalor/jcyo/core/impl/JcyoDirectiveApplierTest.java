@@ -5,6 +5,7 @@ import de.siphalor.jcyo.core.api.JcyoVariables;
 import de.siphalor.jcyo.core.impl.stream.TokenStream;
 import de.siphalor.jcyo.core.impl.token.*;
 import de.siphalor.jcyo.core.impl.transform.JcyoDirectiveApplier;
+import lombok.SneakyThrows;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -13,6 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class JcyoDirectiveApplierTest {
 	@Test
+	@SneakyThrows
 	void testLineBreaks() {
 		TokenStream input = TokenStream.from(List.of(
 				new IdentifierToken("test"),
