@@ -1,7 +1,9 @@
 package de.siphalor.jcyo.core.impl.directive;
 
-public record ElseDirective() implements JcyoDirective {
-	public static final String NAME = "else";
+import de.siphalor.jcyo.core.impl.expression.JcyoExpression;
+
+public record ElifDirective(JcyoExpression condition) implements JcyoDirective {
+	public static final String NAME = "elif";
 
 	@Override
 	public String name() {
@@ -20,6 +22,6 @@ public record ElseDirective() implements JcyoDirective {
 
 	@Override
 	public boolean ends(JcyoDirective blockBegin) {
-		return blockBegin instanceof IfDirective || blockBegin instanceof ElifDirective;
+		return blockBegin instanceof IfDirective;
 	}
 }

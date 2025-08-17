@@ -37,6 +37,7 @@ public class DirectiveParser {
 			case EndDirective.NAME -> parseEndDirective();
 			case GeneratedDirective.NAME -> parseGeneratedDirective();
 			case IfDirective.NAME -> parseIfDirective();
+			case ElifDirective.NAME -> parseElifDirective();
 			case ElseDirective.NAME -> parseElseDirective();
 			default -> throw new JcyoParseException("Unknown directive " + name);
 		};
@@ -69,6 +70,13 @@ public class DirectiveParser {
 		JcyoExpression condition = expressionParser.nextExpression();
 		chompDirectiveEnd();
 		return new IfDirective(condition);
+	}
+
+	private ElifDirective parseElifDirective() {
+		chompWhitespace();
+		JcyoExpression condition = expressionParser.nextExpression();
+		chompDirectiveEnd();
+		return new ElifDirective(condition);
 	}
 
 	private ElseDirective parseElseDirective() {

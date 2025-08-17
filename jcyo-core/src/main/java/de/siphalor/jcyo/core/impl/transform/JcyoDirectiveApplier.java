@@ -6,10 +6,7 @@ import de.siphalor.jcyo.core.api.JcyoVariables;
 import de.siphalor.jcyo.core.impl.CommentStyle;
 import de.siphalor.jcyo.core.impl.JcyoHelper;
 import de.siphalor.jcyo.core.impl.JcyoParseException;
-import de.siphalor.jcyo.core.impl.directive.DirectiveParser;
-import de.siphalor.jcyo.core.impl.directive.ElseDirective;
-import de.siphalor.jcyo.core.impl.directive.IfDirective;
-import de.siphalor.jcyo.core.impl.directive.JcyoDirective;
+import de.siphalor.jcyo.core.impl.directive.*;
 import de.siphalor.jcyo.core.impl.expression.JcyoExpression;
 import de.siphalor.jcyo.core.impl.expression.JcyoExpressionEvaluator;
 import de.siphalor.jcyo.core.impl.stream.PeekableTokenStream;
@@ -56,6 +53,13 @@ public class JcyoDirectiveApplier {
 					JcyoDirective directive = directiveParser.nextDirective();
 					switch (directive) {
 						case IfDirective(JcyoExpression condition) -> {
+							boolean disabled = currentStackEntry().map(StackEntry::disabled).orElse(false)
+									|| !evaluator.evaluate(condition).truthy();
+							stack.push(new StackEntry(directive, disabled, startToken.commentStyle()));
+						}
+						case ElifDirective(JcyoExpression condition) -> {
+							StackEntry entry = stack.pop();
+							validateEndDirective(startToken, directive, entry);
 							boolean disabled = currentStackEntry().map(StackEntry::disabled).orElse(false)
 									|| !evaluator.evaluate(condition).truthy();
 							stack.push(new StackEntry(directive, disabled, startToken.commentStyle()));
