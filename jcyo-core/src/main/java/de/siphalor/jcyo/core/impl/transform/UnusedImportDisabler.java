@@ -74,10 +74,16 @@ public class UnusedImportDisabler {
 				if (token instanceof JavaKeywordToken(JavaKeyword keyword) && keyword == JavaKeyword.IMPORT) {
 					buffer.pushToken(token);
 					boolean used = buffer.copying(source).stream()
-							.takeWhile(t -> !(t instanceof OperatorToken(int codepoint)) || codepoint == '.')
-							.filter(t -> t instanceof IdentifierToken || t instanceof JavaKeywordToken)
+							.takeWhile(t ->
+									!(t instanceof OperatorToken(int codepoint)) || codepoint == '.' || codepoint == '*'
+							)
+							.filter(t ->
+									t instanceof IdentifierToken
+											|| t instanceof JavaKeywordToken
+											|| t instanceof OperatorToken(int codepoint) && codepoint == '*'
+							)
 							.reduce((_, second) -> second)
-							.map(t -> usedIdentifiers.contains(t.raw()))
+							.map(t -> t.raw().equals("*") || usedIdentifiers.contains(t.raw()))
 							.orElse(false);
 					if (used) {
 						return buffer.nextToken();
