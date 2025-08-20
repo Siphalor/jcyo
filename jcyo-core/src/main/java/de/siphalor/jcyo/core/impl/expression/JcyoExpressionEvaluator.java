@@ -4,6 +4,7 @@ import de.siphalor.jcyo.core.api.JcyoProcessingException;
 import de.siphalor.jcyo.core.api.JcyoVariables;
 import de.siphalor.jcyo.core.api.value.*;
 import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.Nullable;
 
 @RequiredArgsConstructor
 public class JcyoExpressionEvaluator {
@@ -43,24 +44,12 @@ public class JcyoExpressionEvaluator {
 				);
 				case AND -> new JcyoBoolean(evaluate(left).truthy() && evaluate(right).truthy());
 				case OR -> new JcyoBoolean(evaluate(left).truthy() || evaluate(right).truthy());
-				case EQUAL -> new JcyoBoolean(evaluate(left).equals(evaluate(right)));
-				case NOT_EQUAL -> new JcyoBoolean(!evaluate(left).equals(evaluate(right)));
-				case GREATER_THAN -> new JcyoBoolean(
-						assertNumber(evaluate(left), "on left side of greater than").value()
-								> assertNumber(evaluate(right), "on right side of greater than").value()
-				);
-				case GREATER_THAN_OR_EQUAL -> new JcyoBoolean(
-						assertNumber(evaluate(left), "on left side of greater than or equal").value()
-								> assertNumber(evaluate(right), "on right side of greater than or equal").value()
-				);
-				case LESS_THAN -> new JcyoBoolean(
-						assertNumber(evaluate(left), "on left side of less than").value()
-								> assertNumber(evaluate(right), "on right side of less than").value()
-				);
-				case LESS_THAN_OR_EQUAL -> new JcyoBoolean(
-						assertNumber(evaluate(left), "on left side of less than or equal").value()
-								> assertNumber(evaluate(right), "on right side of less than or equal").value()
-				);
+				case EQUAL -> new JcyoBoolean(compare(evaluate(left), evaluate(right)) == 0);
+				case NOT_EQUAL -> new JcyoBoolean(compare(evaluate(left), evaluate(right)) != 0);
+				case GREATER_THAN -> new JcyoBoolean(compare(evaluate(left), evaluate(right)) > 0);
+				case GREATER_THAN_OR_EQUAL -> new JcyoBoolean(compare(evaluate(left), evaluate(right)) >= 0);
+				case LESS_THAN -> new JcyoBoolean(compare(evaluate(left), evaluate(right)) < 0);
+				case LESS_THAN_OR_EQUAL -> new JcyoBoolean(compare(evaluate(left), evaluate(right)) <= 0);
 			};
 		};
 	}
@@ -72,6 +61,53 @@ public class JcyoExpressionEvaluator {
 			case JcyoBoolean(boolean bool) -> Boolean.toString(bool);
 			case JcyoUndefined _ -> "";
 		};
+	}
+
+	private int compare(JcyoValue left, JcyoValue right) throws JcyoProcessingException {
+		if (left instanceof JcyoString(String leftString) && right instanceof JcyoString(String rightString)) {
+			return leftString.compareTo(rightString);
+		}
+		Integer cmp = tryCompareAsNumbers(left, right);
+		if (cmp != null) {
+			return cmp;
+		}
+		throw new JcyoProcessingException(
+				"Cannot compare " + left + " and " + right + ": Both must be numbers or strings"
+		);
+	}
+
+	private @Nullable Integer tryCompareAsNumbers(JcyoValue left, JcyoValue right) throws JcyoProcessingException {
+		Double leftNumber = null;
+		Double rightNumber = null;
+		if (left instanceof JcyoNumber (double value)) {
+			leftNumber = value;
+		}
+		if (right instanceof JcyoNumber (double value)) {
+			rightNumber = value;
+		}
+		if (leftNumber != null) {
+			if (rightNumber != null) {
+				return Double.compare(leftNumber, rightNumber);
+			}
+			rightNumber = tryParseAsDouble(valueToString(right));
+			if (rightNumber != null) {
+				return Double.compare(leftNumber, rightNumber);
+			}
+		} else if (rightNumber != null) {
+			leftNumber = tryParseAsDouble(valueToString(left));
+			if (leftNumber != null) {
+				return Double.compare(leftNumber, rightNumber);
+			}
+		}
+		return null;
+	}
+
+	private @Nullable Double tryParseAsDouble(String string) {
+		try {
+			return Double.parseDouble(string);
+		} catch (NumberFormatException e) {
+			return null;
+		}
 	}
 
 	private JcyoNumber assertNumber(JcyoValue value, String context) throws JcyoProcessingException {
