@@ -93,11 +93,11 @@ public class DirectiveParser {
 		Token token = tokenStream.nextToken();
 		if (commentStyle == CommentStyle.LINE) {
 			if (!(token instanceof LineBreakToken)) {
-				throw new JcyoParseException("Expected a line break after full line directive");
+				throw new JcyoParseException("Expected a line break after full line directive, but got: " + token);
 			}
 		} else {
 			if (!(token instanceof JcyoEndToken)) {
-				throw new JcyoParseException("Expected end of directive");
+				throw new JcyoParseException("Expected end of directive, but got: " + token);
 			}
 		}
 	}

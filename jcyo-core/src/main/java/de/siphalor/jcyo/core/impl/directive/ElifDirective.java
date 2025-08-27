@@ -22,6 +22,6 @@ public record ElifDirective(JcyoExpression condition) implements JcyoDirective {
 
 	@Override
 	public boolean ends(JcyoDirective blockBegin) {
-		return blockBegin instanceof IfDirective;
+		return blockBegin instanceof IfDirective || blockBegin instanceof ElifDirective;
 	}
 }

@@ -1,7 +1,6 @@
 package de.siphalor.jcyo.core.impl.transform;
 
 import de.siphalor.jcyo.core.api.JcyoOptions;
-import de.siphalor.jcyo.core.impl.CommentStyle;
 import de.siphalor.jcyo.core.impl.JcyoHelper;
 import de.siphalor.jcyo.core.impl.stream.TokenBuffer;
 import de.siphalor.jcyo.core.impl.stream.TokenStream;
@@ -88,7 +87,7 @@ public class UnusedImportDisabler {
 					if (used) {
 						return buffer.nextToken();
 					} else {
-						return new JcyoDisabledStartToken(helper.disabledForLine(), CommentStyle.LINE);
+						return helper.disabledForLine();
 					}
 				}
 				return token;

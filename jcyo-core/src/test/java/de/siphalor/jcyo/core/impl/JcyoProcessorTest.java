@@ -23,6 +23,34 @@ class JcyoProcessorTest {
 
 	@Test
 	@SneakyThrows
+	void processWithoutDirectives() {
+		String content = """
+				package de.siphalor.coat.util;
+				
+				public interface TickableElement {
+					/**
+					 * Called on every render tick.
+					 */
+					void tick();
+				}
+				""";
+		File input = inputDir.resolve("Test.java").toFile();
+		createInputFile(input, content);
+
+		var processor = new JcyoProcessor(
+				new JcyoVariables(),
+				JcyoOptions.builder().build(),
+				inputDir,
+				cleanOutputDir
+		);
+
+		processor.process(input.toPath());
+
+		assertThat(input).isFile().content().isEqualTo(content);
+	}
+
+	@Test
+	@SneakyThrows
 	void processSimple() {
 		JcyoVariables variables = new JcyoVariables();
 		variables.set("Test", new JcyoString("blub"));
@@ -35,24 +63,23 @@ class JcyoProcessorTest {
 		);
 
 		File input = inputDir.resolve("Test.java").toFile();
-		try (var writer = new BufferedWriter(new FileWriter(input))) {
-			writer.write("""
-					package de.siphalor.jcyo.test;
-					
-					import de.siphalor.jcyo.test.something.Utils;
-					//- import de.siphalor.jcyo.test.something.Helper;
-					
-					class Test {
-						public void test(/*# if int_type == "long" *//*- long *//*# else */int/*# end */ test) {
-							//# if test == "blub"
-							//- Helper.test();
-							//# else
-							Utils.test();
-							//# end
-						}
+		createInputFile(
+				input, """
+				package de.siphalor.jcyo.test;
+				
+				import de.siphalor.jcyo.test.something.Utils;
+				//- import de.siphalor.jcyo.test.something.Helper;
+				
+				class Test {
+					public void test(/*# if int_type == "long" *//*- long *//*# else */int/*# end */ test) {
+						//# if test == "blub"
+						//- Helper.test();
+						//# else
+						Utils.test();
+						//# end
 					}
-					""");
-		}
+				}
+				""");
 
 		processor.process(input.toPath());
 
@@ -84,5 +111,91 @@ class JcyoProcessorTest {
 					}
 				}
 				""");
+	}
+
+	@Test
+	@SneakyThrows
+	void processComments() {
+		JcyoProcessor processor = new JcyoProcessor(
+				new JcyoVariables(),
+				JcyoOptions.builder().updateInput(true).build(),
+				inputDir,
+				cleanOutputDir
+		);
+
+		File input = inputDir.resolve("Test.java").toFile();
+		createInputFile(
+				input, """
+				package de.siphalor.jcyo.test;
+				
+				class Test {
+					public void test() {
+						/*# if false */ /* hi
+						*/
+						// ho
+						/// A javadoc
+						/** another javadoc */
+						/* should stay */
+						/*# end */
+						//# if false
+						// Test
+						/// Javadoc
+						/* test */ return;
+						/**
+						 * What nice
+						 * multiline
+						 * javadoc
+						 */
+						//hi
+						//# end
+					}
+				}
+				""");
+
+		processor.process(input.toPath());
+
+		assertThat(input).isFile().content().isEqualTo("""
+				package de.siphalor.jcyo.test;
+			
+				class Test {
+					public void test() {
+						/*# if false *//*- /* hi
+						*//*-
+						// ho
+						/// A javadoc
+						/** another javadoc *//*-
+						/* should stay *//*-
+						*//*# end */
+						//# if false
+						//- // Test
+						//- /// Javadoc
+						//- /* test */ return;
+						//- /**
+						 //- * What nice
+						 //- * multiline
+						 //- * javadoc
+						 //- */
+						//- //hi
+						//# end
+					}
+				}
+				""");
+
+		assertThat(cleanOutputDir.resolve("Test.java")).isRegularFile().content().isEqualTo("""
+				package de.siphalor.jcyo.test;
+			
+				class Test {
+					public void test() {
+				\t\t
+					}
+				}
+				""");
+	}
+
+	@SneakyThrows
+	private void createInputFile(File file, String content) {
+		try (var writer = new BufferedWriter(new FileWriter(file))) {
+			writer.write(content);
+		}
 	}
 }

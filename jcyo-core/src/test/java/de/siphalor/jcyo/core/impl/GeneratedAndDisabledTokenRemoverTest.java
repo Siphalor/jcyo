@@ -67,4 +67,25 @@ class GeneratedAndDisabledTokenRemoverTest {
 
 		assertThat(remover.stream().toList()).isEqualTo(List.of(new IdentifierToken("token")));
 	}
+
+	@Test
+	void removeFlexDisabledTokensWithImplicitEnd() {
+		TokenStream tokens = TokenStream.from(List.of(
+				new JcyoDisabledStartToken("/*-", CommentStyle.FLEX),
+				new JcyoDirectiveStartToken("/*#", CommentStyle.FLEX),
+				new IdentifierToken("if"),
+				new JavaKeywordToken(JavaKeyword.TRUE),
+				new JcyoEndToken("*/"),
+				JcyoEndToken.implicit()
+		));
+
+		GeneratedAndDisabledTokenRemover remover = new GeneratedAndDisabledTokenRemover(tokens);
+
+		assertThat(remover.stream().toList()).isEqualTo(List.of(
+				new JcyoDirectiveStartToken("/*#", CommentStyle.FLEX),
+				new IdentifierToken("if"),
+				new JavaKeywordToken(JavaKeyword.TRUE),
+				new JcyoEndToken("*/")
+		));
+	}
 }

@@ -5,8 +5,6 @@ import de.siphalor.jcyo.core.api.JcyoProcessingException;
 import de.siphalor.jcyo.core.api.JcyoVariables;
 import de.siphalor.jcyo.core.impl.stream.TokenBuffer;
 import de.siphalor.jcyo.core.impl.stream.TokenStream;
-import de.siphalor.jcyo.core.impl.token.EofToken;
-import de.siphalor.jcyo.core.impl.token.Token;
 import de.siphalor.jcyo.core.impl.transform.GeneratedAndDisabledTokenRemover;
 import de.siphalor.jcyo.core.impl.transform.JcyoCommentRemover;
 import de.siphalor.jcyo.core.impl.transform.JcyoDirectiveApplier;
@@ -89,14 +87,8 @@ public class JcyoProcessor {
 
 	void writeToFile(File file, TokenStream tokenStream) throws JcyoProcessingException {
 		file.getParentFile().mkdirs();
-		try (var writer = new BufferedWriter(new FileWriter(file))) {
-			while (true) {
-				Token token = tokenStream.nextToken();
-				if (token instanceof EofToken) {
-					break;
-				}
-				writer.write(token.raw());
-			}
+		try (var writer = new TokenWriter(new BufferedWriter(new FileWriter(file)))) {
+			writer.writeAll(tokenStream);
 		} catch (IOException e) {
 			throw new JcyoProcessingException("Failed to write to file: " + file, e);
 		}

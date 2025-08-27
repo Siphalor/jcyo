@@ -65,4 +65,30 @@ class JcyoLexerTest {
 				new LineBreakToken("\n")
 		));
 	}
+
+	@Test
+	void testDisabledFlexCommentsImplicitEnds() {
+		JcyoLexer lexer = new JcyoLexer(
+				new StringReader("/*-test/* blub *//*- /*#if false*//*#end*/"),
+				JcyoOptions.builder().build()
+		);
+
+		assertThat(lexer.stream().toList()).isEqualTo(List.of(
+				new JcyoDisabledStartToken("/*-", CommentStyle.FLEX),
+				new IdentifierToken("test"),
+				new PlainJavaCommentToken("/* blub */", CommentStyle.FLEX, false),
+				new JcyoEndToken(""), // implicit
+				new JcyoDisabledStartToken("/*-", CommentStyle.FLEX),
+				new WhitespaceToken(" "),
+				new JcyoDirectiveStartToken("/*#", CommentStyle.FLEX),
+				new JavaKeywordToken(JavaKeyword.IF),
+				new WhitespaceToken(" "),
+				new JavaKeywordToken(JavaKeyword.FALSE),
+				new JcyoEndToken("*/"), // directive end
+				new JcyoEndToken(""), // implicit
+				new JcyoDirectiveStartToken("/*#", CommentStyle.FLEX),
+				new IdentifierToken("end"),
+				new JcyoEndToken("*/") // directive end
+		));
+	}
 }

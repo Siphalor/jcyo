@@ -13,7 +13,7 @@ public class TokenBuffer implements TokenStream {
 
 	public void pushToken(Token token) {
 		if (eofPushed) {
-			throw new IllegalStateException("EOF token already pushed");
+			throw new IllegalStateException("EOF token already pushed, but got: " + token);
 		}
 		if (token instanceof EofToken) {
 			eofPushed = true;
@@ -44,7 +44,9 @@ public class TokenBuffer implements TokenStream {
 	public TokenStream copying(TokenStream other) {
 		return () -> {
 			Token token = other.nextToken();
-			pushToken(token);
+			if (!(eofPushed && token instanceof EofToken)) {
+				pushToken(token);
+			}
 			return token;
 		};
 	}

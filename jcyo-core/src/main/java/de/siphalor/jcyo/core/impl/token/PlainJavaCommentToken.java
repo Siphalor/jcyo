@@ -1,4 +1,6 @@
 package de.siphalor.jcyo.core.impl.token;
 
-public record PlainJavaCommentToken(String raw) implements Token {
+import de.siphalor.jcyo.core.impl.CommentStyle;
+
+public record PlainJavaCommentToken(String raw, CommentStyle commentStyle, boolean javadoc) implements Token {
 }
