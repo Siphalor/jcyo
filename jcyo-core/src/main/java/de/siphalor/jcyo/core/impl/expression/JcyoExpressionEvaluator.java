@@ -1,6 +1,5 @@
 package de.siphalor.jcyo.core.impl.expression;
 
-import de.siphalor.jcyo.core.api.JcyoProcessingException;
 import de.siphalor.jcyo.core.api.JcyoVariables;
 import de.siphalor.jcyo.core.api.value.*;
 import lombok.RequiredArgsConstructor;
@@ -10,7 +9,7 @@ import org.jspecify.annotations.Nullable;
 public class JcyoExpressionEvaluator {
 	private final JcyoVariables variables;
 
-	public JcyoValue evaluate(JcyoExpression expression) throws JcyoProcessingException {
+	public JcyoValue evaluate(JcyoExpression expression) throws JcyoExpressionEvaluationException {
 		return switch (expression) {
 			case JcyoConstant(JcyoValue value) -> value;
 			case JcyoVariableReference(String name) -> variables.get(name).orElse(new JcyoUndefined(name));
@@ -63,7 +62,7 @@ public class JcyoExpressionEvaluator {
 		};
 	}
 
-	private int compare(JcyoValue left, JcyoValue right) throws JcyoProcessingException {
+	private int compare(JcyoValue left, JcyoValue right) throws JcyoExpressionEvaluationException {
 		if (left instanceof JcyoString(String leftString) && right instanceof JcyoString(String rightString)) {
 			return leftString.compareTo(rightString);
 		}
@@ -71,12 +70,12 @@ public class JcyoExpressionEvaluator {
 		if (cmp != null) {
 			return cmp;
 		}
-		throw new JcyoProcessingException(
+		throw new JcyoExpressionEvaluationException(
 				"Cannot compare " + left + " and " + right + ": Both must be numbers or strings"
 		);
 	}
 
-	private @Nullable Integer tryCompareAsNumbers(JcyoValue left, JcyoValue right) throws JcyoProcessingException {
+	private @Nullable Integer tryCompareAsNumbers(JcyoValue left, JcyoValue right) throws JcyoExpressionEvaluationException {
 		Double leftNumber = null;
 		Double rightNumber = null;
 		if (left instanceof JcyoNumber (double value)) {
@@ -110,10 +109,10 @@ public class JcyoExpressionEvaluator {
 		}
 	}
 
-	private JcyoNumber assertNumber(JcyoValue value, String context) throws JcyoProcessingException {
+	private JcyoNumber assertNumber(JcyoValue value, String context) throws JcyoExpressionEvaluationException {
 		if (value instanceof JcyoNumber number) {
 			return number;
 		}
-		throw new JcyoProcessingException("Expected number " + context + ", got: " + value);
+		throw new JcyoExpressionEvaluationException("Expected number " + context + ", got: " + value);
 	}
 }

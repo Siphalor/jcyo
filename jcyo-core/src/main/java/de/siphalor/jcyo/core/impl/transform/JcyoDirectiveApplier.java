@@ -1,131 +1,111 @@
 package de.siphalor.jcyo.core.impl.transform;
 
-import de.siphalor.jcyo.core.api.JcyoOptions;
-import de.siphalor.jcyo.core.api.JcyoProcessingException;
 import de.siphalor.jcyo.core.api.JcyoVariables;
 import de.siphalor.jcyo.core.impl.CommentStyle;
-import de.siphalor.jcyo.core.impl.JcyoHelper;
 import de.siphalor.jcyo.core.impl.JcyoParseException;
 import de.siphalor.jcyo.core.impl.directive.*;
 import de.siphalor.jcyo.core.impl.expression.JcyoExpression;
+import de.siphalor.jcyo.core.impl.expression.JcyoExpressionEvaluationException;
 import de.siphalor.jcyo.core.impl.expression.JcyoExpressionEvaluator;
 import de.siphalor.jcyo.core.impl.stream.PeekableTokenStream;
 import de.siphalor.jcyo.core.impl.stream.TokenBuffer;
 import de.siphalor.jcyo.core.impl.stream.TokenStream;
 import de.siphalor.jcyo.core.impl.token.*;
 import lombok.Data;
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
-import java.util.Optional;
+import java.util.*;
 
 public class JcyoDirectiveApplier {
-	private final JcyoHelper helper;
 	private final JcyoExpressionEvaluator expressionEvaluator;
 
-	public JcyoDirectiveApplier(JcyoOptions options, JcyoVariables variables) {
-		this.helper = new JcyoHelper(options);
+	public JcyoDirectiveApplier(JcyoVariables variables) {
 		this.expressionEvaluator = new JcyoExpressionEvaluator(variables);
 	}
 
-	public TokenStream apply(TokenStream stream) throws JcyoProcessingException {
-		StreamTransformer transformer = new StreamTransformer(new PeekableTokenStream(stream));
-		transformer.run();
-		return transformer.output();
+	public TokenStream apply(TokenStream stream) {
+		return new StreamTransformer(PeekableTokenStream.from(stream));
 	}
 
 	@RequiredArgsConstructor
-	private class StreamTransformer {
+	private class StreamTransformer implements TokenStream {
 		private final PeekableTokenStream input;
-		@Getter
-		private final TokenBuffer output = new TokenBuffer();
+		private final TokenBuffer buffer = new TokenBuffer();
 		private final Deque<StackEntry> stack = new ArrayDeque<>();
-		private boolean lastTokenWasWhitespace = false;
+		private int indentLength;
+		private final List<String> indentBuilder = new ArrayList<>();
 
-		public void run() throws JcyoProcessingException {
-			var directiveParser = new DirectiveParser(new PeekableTokenStream(output.copying(input)));
-
-			loop:
+		@Override
+		public Token nextToken() {
 			while (true) {
+				if (!buffer.isEmpty()) {
+					return buffer.nextToken();
+				}
+
 				switch (input.peekToken()) {
 					case EofToken _ -> {
-						output.pushToken(input.nextToken());
-						break loop;
+						return input.nextToken();
 					}
 					case JcyoDirectiveStartToken startToken -> {
-						explicitlyEndFlexDisabledRegion();
-
-						evaluateDirective(startToken, directiveParser.nextDirective());
-
-						lastTokenWasWhitespace = false;
-					}
-					case PlainJavaCommentToken(_, CommentStyle commentStyle, boolean javadoc)
-							when commentStyle == CommentStyle.LINE -> {
-						Token commentToken = input.nextToken();
-						pushDisabledTokenIfNecessary();
-						output.pushToken(commentToken);
-						lastTokenWasWhitespace = false;
-					}
-					case PlainJavaCommentToken(_, CommentStyle commentStyle, _)
-							when commentStyle == CommentStyle.FLEX -> {
-						Token commentToken = input.nextToken();
-						pushDisabledTokenIfNecessary();
-						output.pushToken(commentToken);
-						implicitlyEndFlexDisabledRegion();
-						lastTokenWasWhitespace = false;
+						DirectiveParser parser = new DirectiveParser(buffer.copying(input));
+						JcyoDirective directive = parser.nextDirective();
+						evaluateDirective(startToken, directive);
 					}
 					case LineBreakToken _ -> {
-						Token lineBreakToken = input.nextToken();
-						pushDisabledTokenIfNecessary();
-						currentStackEntry()
-								.filter(stackEntry -> stackEntry.commentStyle == CommentStyle.LINE)
-								.ifPresent(stackEntry -> stackEntry.disabledActive(false));
-						output.pushToken(lineBreakToken);
-						lastTokenWasWhitespace = false;
+						clearIndent();
+						return input.nextToken();
 					}
-					case WhitespaceToken _ -> {
-						currentStackEntryIfDisabledTokenRequired()
-								.filter(stackEntry -> stackEntry.commentStyle == CommentStyle.FLEX)
-								.ifPresent(stackEntry -> {
-									output.pushToken(createDisabledStartToken(stackEntry.commentStyle));
-									stackEntry.disabledActive(true);
-								});
-						output.pushToken(input.nextToken());
-						lastTokenWasWhitespace = true;
+					case RepresentableToken representableToken -> {
+						pushIndent(representableToken.raw());
+						return input.nextToken();
 					}
 					case Token _ -> {
-						pushDisabledTokenIfNecessary();
-						output.pushToken(input.nextToken());
-						lastTokenWasWhitespace = false;
+						return input.nextToken();
 					}
 				}
 			}
 		}
 
-		private void evaluateDirective(JcyoDirectiveStartToken startToken, JcyoDirective directive)
-				throws JcyoProcessingException {
+		private void pushIndent(String indent) {
+			indentBuilder.add(indent);
+			indentLength += indent.length();
+		}
+
+		private void clearIndent() {
+			indentBuilder.clear();
+			indentLength = 0;
+		}
+
+		private void evaluateDirective(JcyoDirectiveStartToken startToken, JcyoDirective directive) {
 			switch (directive) {
 				case IfDirective(JcyoExpression condition) -> {
-					boolean enabled = isCurrentStackEntryEnabled() && expressionEvaluator.evaluate(condition).truthy();
-					stack.push(new StackEntry(directive, enabled, startToken.commentStyle()));
+					try {
+						boolean enabled = isCurrentStackEntryEnabled()
+								&& expressionEvaluator.evaluate(condition).truthy();
+						pushStackEntry(new StackEntry(directive, enabled, startToken.commentStyle()));
+					} catch (JcyoExpressionEvaluationException e) {
+						throw new DirectiveApplicationException("Failed to evaluate if condition", e);
+					}
 				}
 				case ElifDirective(JcyoExpression condition) -> {
-					StackEntry oldEntry = stack.pop();
-					validateEndDirective(startToken, directive, oldEntry);
+					try {
+						StackEntry oldEntry = popStackEntry();
+						validateEndDirective(startToken, directive, oldEntry);
 
-					boolean enabled = isCurrentStackEntryEnabled()
-							&& !oldEntry.encounteredEnabledBranch()
-							&& expressionEvaluator.evaluate(condition).truthy();
+						boolean enabled = isCurrentStackEntryEnabled()
+								&& !oldEntry.encounteredEnabledBranch()
+								&& expressionEvaluator.evaluate(condition).truthy();
 
-					StackEntry newEntry = new StackEntry(directive, enabled, startToken.commentStyle());
-					newEntry.encounteredEnabledBranch(oldEntry.encounteredEnabledBranch() || enabled);
+						StackEntry newEntry = new StackEntry(directive, enabled, startToken.commentStyle());
+						newEntry.encounteredEnabledBranch(oldEntry.encounteredEnabledBranch() || enabled);
 
-					stack.push(newEntry);
+						pushStackEntry(newEntry);
+					} catch (JcyoExpressionEvaluationException e) {
+						throw new DirectiveApplicationException("Failed to evaluate elif condition", e);
+					}
 				}
 				case ElseDirective _ -> {
-					StackEntry oldEntry = stack.pop();
+					StackEntry oldEntry = popStackEntry();
 					validateEndDirective(startToken, directive, oldEntry);
 
 					boolean enabled = isCurrentStackEntryEnabled()
@@ -133,60 +113,55 @@ public class JcyoDirectiveApplier {
 					StackEntry newEntry = new StackEntry(directive, enabled, startToken.commentStyle());
 					newEntry.encounteredEnabledBranch(oldEntry.encounteredEnabledBranch() || enabled);
 
-					stack.push(newEntry);
+					pushStackEntry(newEntry);
 				}
 				default -> {
 					if (directive.isBlockEnd()) {
-						StackEntry entry = stack.pop();
+						StackEntry entry = popStackEntry();
 						validateEndDirective(startToken, directive, entry);
 					}
 					if (directive.isBlockBegin()) {
 						currentStackEntry().ifPresentOrElse(
-								stackEntry -> stack.push(new StackEntry(
+								stackEntry -> pushStackEntry(new StackEntry(
 										directive,
 										stackEntry.enabled(),
 										stackEntry.commentStyle()
 								)),
-								() -> stack.push(new StackEntry(directive, false, startToken.commentStyle()))
+								() -> pushStackEntry(new StackEntry(directive, false, startToken.commentStyle()))
 						);
 					}
 				}
 			}
 		}
 
-		private void explicitlyEndFlexDisabledRegion() {
-			currentStackEntry()
-					.filter(stackEntry -> stackEntry.commentStyle() == CommentStyle.FLEX && stackEntry.disabledActive())
-					.ifPresent(stackEntry -> {
-						output.pushToken(createDisabledFlexEndToken());
-						stackEntry.disabledActive(false);
-					});
-		}
-
-		private void implicitlyEndFlexDisabledRegion() {
-			currentStackEntry()
-					.filter(stackEntry -> stackEntry.commentStyle() == CommentStyle.FLEX && stackEntry.disabledActive())
-					.ifPresent(stackEntry -> {
-						output.pushToken(JcyoEndToken.implicit());
-						stackEntry.disabledActive(false);
-					});
-		}
-
 		private boolean isCurrentStackEntryEnabled() {
 			return currentStackEntry().map(StackEntry::enabled).orElse(true);
 		}
 
-		private void pushDisabledTokenIfNecessary() {
-			currentStackEntryIfDisabledTokenRequired()
-					.ifPresent(stackEntry -> {
-						output.pushToken(createDisabledStartToken(stackEntry.commentStyle()));
-						stackEntry.disabledActive(true);
-					});
+		private void pushStackEntry(StackEntry entry) {
+			if (!entry.enabled() && isCurrentStackEntryEnabled()) {
+				buffer.pushToken(new JcyoDisabledRegionStartToken(
+						entry.commentStyle(),
+						entry.commentStyle() == CommentStyle.LINE ? concatIndent() : ""
+				));
+			}
+			stack.push(entry);
 		}
 
-		private Optional<StackEntry> currentStackEntryIfDisabledTokenRequired() {
-			return currentStackEntry()
-					.filter(stackEntry -> !stackEntry.enabled() && !stackEntry.disabledActive());
+		private StackEntry popStackEntry() {
+			StackEntry innerEntry = stack.pop();
+			if (!innerEntry.enabled() && isCurrentStackEntryEnabled()) {
+				buffer.pushFrontToken(new JcyoDisabledRegionEndToken());
+			}
+			return innerEntry;
+		}
+
+		private String concatIndent() {
+			var sb = new StringBuilder(indentLength);
+			for (var indent : indentBuilder) {
+				sb.append(indent);
+			}
+			return sb.toString();
 		}
 
 		private void validateEndDirective(
@@ -212,28 +187,6 @@ public class JcyoDirectiveApplier {
 		private Optional<StackEntry> currentStackEntry() {
 			return Optional.ofNullable(stack.peek());
 		}
-
-		private JcyoDisabledStartToken createDisabledStartToken(CommentStyle commentStyle) {
-			return switch (commentStyle) {
-				case LINE -> helper.disabledForLine();
-				case FLEX -> {
-					Token peek = input.peekToken();
-					if (peek instanceof WhitespaceToken || peek instanceof LineBreakToken) {
-						yield helper.disabledForFlexStartNoWhitespace();
-					} else {
-						yield helper.disabledForFlexStart();
-					}
-				}
-			};
-		}
-
-		private JcyoEndToken createDisabledFlexEndToken() {
-			if (lastTokenWasWhitespace) {
-				return helper.disabledForFlexEndNoWhitespace();
-			} else {
-				return helper.disabledForFlexEnd();
-			}
-		}
 	}
 
 	@Data
@@ -241,7 +194,6 @@ public class JcyoDirectiveApplier {
 		private final JcyoDirective startDirective;
 		private final boolean enabled;
 		private final CommentStyle commentStyle;
-		private boolean disabledActive;
 		private boolean encounteredEnabledBranch;
 
 		public StackEntry(JcyoDirective startDirective, boolean enabled, CommentStyle commentStyle) {
@@ -250,6 +202,12 @@ public class JcyoDirectiveApplier {
 			this.enabled = enabled;
 			this.commentStyle = commentStyle;
 			this.encounteredEnabledBranch = enabled;
+		}
+	}
+
+	private static class DirectiveApplicationException extends RuntimeException {
+		public DirectiveApplicationException(String message, Throwable cause) {
+			super(message, cause);
 		}
 	}
 }

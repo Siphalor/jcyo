@@ -7,7 +7,7 @@ import de.siphalor.jcyo.core.impl.token.*;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
-public class JcyoCommentRemover implements TokenStream {
+public class JcyoCleaner implements TokenStream {
 	private final TokenStream inner;
 	private final TokenBuffer whitespaceBuffer = new TokenBuffer();
 
@@ -37,6 +37,7 @@ public class JcyoCommentRemover implements TokenStream {
 						chompToTokenType(JcyoEndToken.class);
 					}
 				}
+				case JcyoDisabledRegionStartToken _ -> chompToTokenType(JcyoDisabledRegionEndToken.class);
 				default -> {
 					if (!whitespaceBuffer.isEmpty()) {
 						whitespaceBuffer.pushToken(token);

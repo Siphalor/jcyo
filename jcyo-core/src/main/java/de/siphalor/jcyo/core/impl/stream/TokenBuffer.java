@@ -4,10 +4,10 @@ import de.siphalor.jcyo.core.impl.token.EofToken;
 import de.siphalor.jcyo.core.impl.token.Token;
 
 import java.util.ArrayDeque;
-import java.util.Queue;
+import java.util.Deque;
 
 public class TokenBuffer implements TokenStream {
-	private final Queue<Token> buffer = new ArrayDeque<>();
+	private final Deque<Token> buffer = new ArrayDeque<>();
 	private boolean eofPushed;
 	private boolean eofReached;
 
@@ -19,6 +19,17 @@ public class TokenBuffer implements TokenStream {
 			eofPushed = true;
 		}
 		buffer.add(token);
+	}
+
+	public void pushFrontToken(Token token) {
+		if (eofReached) {
+			throw new IllegalStateException("EOF token already reached, but got: " + token);
+		}
+		if (token instanceof EofToken) {
+			eofPushed = true;
+			buffer.clear();
+		}
+		buffer.addFirst(token);
 	}
 
 	public void clear() {
@@ -48,6 +59,24 @@ public class TokenBuffer implements TokenStream {
 				pushToken(token);
 			}
 			return token;
+		};
+	}
+
+	public PeekableTokenStream copying(PeekableTokenStream other) {
+		return new PeekableTokenStream() {
+			@Override
+			public Token nextToken() {
+				Token token = other.nextToken();
+				if (!(eofPushed && token instanceof EofToken)) {
+					pushToken(token);
+				}
+				return token;
+			}
+
+			@Override
+			public Token peekToken() {
+				return other.peekToken();
+			}
 		};
 	}
 }

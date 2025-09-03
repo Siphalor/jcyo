@@ -1,5 +1,7 @@
 package de.siphalor.jcyo.core.impl.transform;
 
+import de.siphalor.jcyo.core.api.JcyoOptions;
+import de.siphalor.jcyo.core.impl.JcyoHelper;
 import de.siphalor.jcyo.core.impl.JcyoParseException;
 import de.siphalor.jcyo.core.impl.directive.DirectiveParser;
 import de.siphalor.jcyo.core.impl.directive.GeneratedDirective;
@@ -11,11 +13,13 @@ import de.siphalor.jcyo.core.impl.token.*;
 
 public class GeneratedAndDisabledTokenRemover implements TokenStream {
 	private final PeekableTokenStream inner;
+	private final JcyoHelper jcyoHelper;
 	private final TokenBuffer buffer = new TokenBuffer();
 	private boolean inDisabledSection = false;
 
-	public GeneratedAndDisabledTokenRemover(TokenStream inner) {
-		this.inner = new PeekableTokenStream(inner);
+	public GeneratedAndDisabledTokenRemover(TokenStream inner, JcyoOptions options) {
+		this.inner = PeekableTokenStream.from(inner);
+		this.jcyoHelper = new JcyoHelper(options);
 	}
 
 	@Override
@@ -28,7 +32,7 @@ public class GeneratedAndDisabledTokenRemover implements TokenStream {
 			Token token = inner.peekToken();
 			switch (token) {
 				case JcyoDirectiveStartToken _ -> {
-					DirectiveParser parser = new DirectiveParser(new PeekableTokenStream(buffer.copying(inner)));
+					DirectiveParser parser = new DirectiveParser(PeekableTokenStream.from(buffer.copying(inner)));
 					JcyoDirective directive = parser.nextDirective();
 					if (!(directive instanceof GeneratedDirective generatedDirective)) {
 						continue;
@@ -53,6 +57,10 @@ public class GeneratedAndDisabledTokenRemover implements TokenStream {
 				case JcyoEndToken _ when inDisabledSection -> {
 					inner.nextToken();
 					inDisabledSection = false;
+				}
+				case PlainJavaCommentToken commentToken -> {
+					inner.nextToken();
+					return processPlainJavaComment(commentToken);
 				}
 				default -> {
 					return inner.nextToken();
@@ -99,5 +107,37 @@ public class GeneratedAndDisabledTokenRemover implements TokenStream {
 				break;
 			}
 		}
+	}
+
+	private PlainJavaCommentToken processPlainJavaComment(PlainJavaCommentToken token) {
+		String disabledTokenForLineNoWhitespace = jcyoHelper.disabledForLineNoWhitespace();
+		String rawComment = token.raw();
+		int disabledTokenMatch = rawComment.indexOf(disabledTokenForLineNoWhitespace);
+		if (disabledTokenMatch == -1) {
+			return token;
+		}
+
+		StringBuilder plainCommentBuilder = new StringBuilder(rawComment.length());
+		plainCommentBuilder.append(rawComment, 0, disabledTokenMatch);
+
+		int currentPos = disabledTokenMatch;
+		String disabledTokenForLine = jcyoHelper.disabledForLine();
+		while (true) {
+			if (rawComment.startsWith(disabledTokenForLine, currentPos)) {
+				currentPos += disabledTokenForLine.length();
+			} else {
+				currentPos += disabledTokenForLineNoWhitespace.length();
+			}
+			disabledTokenMatch = rawComment.indexOf(disabledTokenForLineNoWhitespace, currentPos);
+			if (disabledTokenMatch == -1) {
+				plainCommentBuilder.append(rawComment, currentPos, rawComment.length());
+				break;
+			} else {
+				plainCommentBuilder.append(rawComment, currentPos, disabledTokenMatch);
+				currentPos = disabledTokenMatch;
+			}
+		}
+
+		return new PlainJavaCommentToken(plainCommentBuilder.toString(), token.commentStyle(), token.javadoc());
 	}
 }

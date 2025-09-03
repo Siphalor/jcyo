@@ -1,9 +1,12 @@
 package de.siphalor.jcyo.core.impl;
 
+import de.siphalor.jcyo.core.api.JcyoOptions;
 import de.siphalor.jcyo.core.impl.stream.TokenStream;
 import de.siphalor.jcyo.core.impl.token.*;
 import de.siphalor.jcyo.core.impl.transform.GeneratedAndDisabledTokenRemover;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.util.List;
 
@@ -32,7 +35,10 @@ class GeneratedAndDisabledTokenRemoverTest {
 				endToken
 		));
 
-		GeneratedAndDisabledTokenRemover remover = new GeneratedAndDisabledTokenRemover(tokens);
+		GeneratedAndDisabledTokenRemover remover = new GeneratedAndDisabledTokenRemover(
+				tokens,
+				JcyoOptions.builder().build()
+		);
 
 		assertThat(remover.nextToken()).isSameAs(startToken);
 		assertThat(remover.nextToken()).isSameAs(endToken);
@@ -46,7 +52,10 @@ class GeneratedAndDisabledTokenRemoverTest {
 				new JcyoEndToken("")
 		));
 
-		GeneratedAndDisabledTokenRemover remover = new GeneratedAndDisabledTokenRemover(tokens);
+		GeneratedAndDisabledTokenRemover remover = new GeneratedAndDisabledTokenRemover(
+				tokens,
+				JcyoOptions.builder().build()
+		);
 
 		assertThat(remover.stream().toList()).isEqualTo(List.of(new IdentifierToken("token")));
 	}
@@ -63,7 +72,10 @@ class GeneratedAndDisabledTokenRemoverTest {
 				new JcyoEndToken("")
 		));
 
-		GeneratedAndDisabledTokenRemover remover = new GeneratedAndDisabledTokenRemover(tokens);
+		GeneratedAndDisabledTokenRemover remover = new GeneratedAndDisabledTokenRemover(
+				tokens,
+				JcyoOptions.builder().build()
+		);
 
 		assertThat(remover.stream().toList()).isEqualTo(List.of(new IdentifierToken("token")));
 	}
@@ -79,7 +91,10 @@ class GeneratedAndDisabledTokenRemoverTest {
 				JcyoEndToken.implicit()
 		));
 
-		GeneratedAndDisabledTokenRemover remover = new GeneratedAndDisabledTokenRemover(tokens);
+		GeneratedAndDisabledTokenRemover remover = new GeneratedAndDisabledTokenRemover(
+				tokens,
+				JcyoOptions.builder().build()
+		);
 
 		assertThat(remover.stream().toList()).isEqualTo(List.of(
 				new JcyoDirectiveStartToken("/*#", CommentStyle.FLEX),
@@ -87,5 +102,29 @@ class GeneratedAndDisabledTokenRemoverTest {
 				new JavaKeywordToken(JavaKeyword.TRUE),
 				new JcyoEndToken("*/")
 		));
+	}
+
+	@ParameterizedTest
+	@CsvSource(textBlock = """
+			/* test */,/* test */
+			/* //- test */,/* test */
+			'/**
+			//-  * test
+			//-  */','/**
+			 * test
+			 */'
+			""")
+	void removeLineDisabledTokensFromFlexComments(String comment, String plainComment) {
+		TokenStream tokens = TokenStream.from(List.of(
+				new PlainJavaCommentToken(comment, CommentStyle.FLEX, false)
+		));
+
+		GeneratedAndDisabledTokenRemover remover = new GeneratedAndDisabledTokenRemover(
+				tokens,
+				JcyoOptions.builder().build()
+		);
+
+		assertThat(remover.stream().toList())
+				.isEqualTo(List.of(new PlainJavaCommentToken(plainComment, CommentStyle.FLEX, false)));
 	}
 }

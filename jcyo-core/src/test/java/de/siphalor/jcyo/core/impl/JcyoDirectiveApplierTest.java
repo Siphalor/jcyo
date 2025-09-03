@@ -1,12 +1,11 @@
 package de.siphalor.jcyo.core.impl;
 
-import de.siphalor.jcyo.core.api.JcyoOptions;
 import de.siphalor.jcyo.core.api.JcyoVariables;
 import de.siphalor.jcyo.core.api.value.JcyoBoolean;
 import de.siphalor.jcyo.core.api.value.JcyoNumber;
 import de.siphalor.jcyo.core.impl.stream.TokenStream;
 import de.siphalor.jcyo.core.impl.token.*;
-import de.siphalor.jcyo.core.impl.transform.JcyoCommentRemover;
+import de.siphalor.jcyo.core.impl.transform.JcyoCleaner;
 import de.siphalor.jcyo.core.impl.transform.JcyoDirectiveApplier;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.Test;
@@ -48,7 +47,7 @@ class JcyoDirectiveApplierTest {
 				new LineBreakToken("\n")
 		));
 
-		var applier = new JcyoDirectiveApplier(JcyoOptions.builder().build(), new JcyoVariables());
+		var applier = new JcyoDirectiveApplier(new JcyoVariables());
 		TokenStream result = applier.apply(input);
 
 		assertThat(result.stream().toList()).isEqualTo(List.of(
@@ -57,8 +56,8 @@ class JcyoDirectiveApplierTest {
 				new JavaKeywordToken(JavaKeyword.IF),
 				new JavaKeywordToken(JavaKeyword.FALSE),
 				new LineBreakToken("\n"),
+				new JcyoDisabledRegionStartToken(CommentStyle.LINE, "test"),
 				new WhitespaceToken(" "),
-				new JcyoDisabledStartToken("//- ", CommentStyle.LINE),
 				new IdentifierToken("blub"),
 				new OperatorToken('+'),
 				new NumberLiteralToken("1"),
@@ -66,11 +65,11 @@ class JcyoDirectiveApplierTest {
 				new JavaKeywordToken(JavaKeyword.IF),
 				new JavaKeywordToken(JavaKeyword.TRUE),
 				new LineBreakToken("\n"),
-				new JcyoDisabledStartToken("//- ", CommentStyle.LINE),
 				new JavaKeywordToken(JavaKeyword.FALSE),
 				new JcyoDirectiveStartToken("//#", CommentStyle.LINE),
 				new IdentifierToken("end"),
 				new LineBreakToken("\n"),
+				new JcyoDisabledRegionEndToken(),
 				new JcyoDirectiveStartToken("//#", CommentStyle.LINE),
 				new IdentifierToken("else"),
 				new LineBreakToken("\n"),
@@ -104,7 +103,7 @@ class JcyoDirectiveApplierTest {
 
 		JcyoVariables variables = new JcyoVariables();
 		variables.set("blub", new JcyoBoolean(true));
-		var applier = new JcyoDirectiveApplier(JcyoOptions.builder().build(), variables);
+		var applier = new JcyoDirectiveApplier(variables);
 		TokenStream result = applier.apply(input);
 
 		assertThat(result.stream().toList()).isEqualTo(List.of(
@@ -118,9 +117,9 @@ class JcyoDirectiveApplierTest {
 				new JcyoDirectiveStartToken("/*#", CommentStyle.FLEX),
 				new JavaKeywordToken(JavaKeyword.ELSE),
 				new JcyoEndToken("*/"),
-				new JcyoDisabledStartToken("/*- ", CommentStyle.FLEX),
+				new JcyoDisabledRegionStartToken(CommentStyle.FLEX, ""),
 				new IdentifierToken("ho"),
-				new JcyoEndToken(" */"),
+				new JcyoDisabledRegionEndToken(),
 				new JcyoDirectiveStartToken("/*#", CommentStyle.FLEX),
 				new IdentifierToken("end"),
 				new JcyoEndToken("*/"),
@@ -174,11 +173,8 @@ class JcyoDirectiveApplierTest {
 
 		var vars = new JcyoVariables();
 		vars.set("t", new JcyoNumber(variable));
-		JcyoDirectiveApplier applier = new JcyoDirectiveApplier(
-				JcyoOptions.builder().build(),
-				vars
-		);
-		TokenStream outputStream = new JcyoCommentRemover(applier.apply(TokenStream.from(inputTokens)));
+		JcyoDirectiveApplier applier = new JcyoDirectiveApplier(vars);
+		TokenStream outputStream = new JcyoCleaner(applier.apply(TokenStream.from(inputTokens)));
 
 		assertThat(outputStream.stream().toList()).isEqualTo(List.of(new IdentifierToken(expected)));
 	}
@@ -201,7 +197,7 @@ class JcyoDirectiveApplierTest {
 				EofToken.instance()
 		);
 
-		JcyoDirectiveApplier applier = new JcyoDirectiveApplier(JcyoOptions.builder().build(), new JcyoVariables());
+		JcyoDirectiveApplier applier = new JcyoDirectiveApplier(new JcyoVariables());
 		TokenStream outputStream = applier.apply(TokenStream.from(inputTokens));
 
 		assertThat(outputStream.stream().toList()).isEqualTo(List.of(
@@ -209,14 +205,12 @@ class JcyoDirectiveApplierTest {
 				new JavaKeywordToken(JavaKeyword.IF),
 				new JavaKeywordToken(JavaKeyword.FALSE),
 				new JcyoEndToken("*/"),
-				new JcyoDisabledStartToken("/*-", CommentStyle.FLEX),
+				new JcyoDisabledRegionStartToken(CommentStyle.FLEX, ""),
 				new WhitespaceToken(" "),
 				new PlainJavaCommentToken("/* test \n next */", CommentStyle.FLEX, false),
-				JcyoEndToken.implicit(),
-				new JcyoDisabledStartToken("/*-", CommentStyle.FLEX),
 				new LineBreakToken("\n"),
 				new WhitespaceToken(" "),
-				new JcyoEndToken("*/"),
+				new JcyoDisabledRegionEndToken(),
 				new JcyoDirectiveStartToken("/*#", CommentStyle.FLEX),
 				new IdentifierToken("end"),
 				new JcyoEndToken("*/")
@@ -242,7 +236,7 @@ class JcyoDirectiveApplierTest {
 				new LineBreakToken("\n")
 		);
 
-		JcyoDirectiveApplier applier = new JcyoDirectiveApplier(JcyoOptions.builder().build(), new JcyoVariables());
+		JcyoDirectiveApplier applier = new JcyoDirectiveApplier(new JcyoVariables());
 		TokenStream outputStream = applier.apply(TokenStream.from(inputTokens));
 
 		assertThat(outputStream.stream().toList()).isEqualTo(List.of(
@@ -250,14 +244,14 @@ class JcyoDirectiveApplierTest {
 				new JavaKeywordToken(JavaKeyword.IF),
 				new JavaKeywordToken(JavaKeyword.FALSE),
 				new LineBreakToken("\n"),
+				new JcyoDisabledRegionStartToken(CommentStyle.LINE, ""),
 				new WhitespaceToken(" "),
-				new JcyoDisabledStartToken("//- ", CommentStyle.LINE),
 				new PlainJavaCommentToken("// test", CommentStyle.LINE, false),
 				new LineBreakToken("\n"),
 				new WhitespaceToken(" "),
-				new JcyoDisabledStartToken("//- ", CommentStyle.LINE),
 				new PlainJavaCommentToken("/* test \n next */", CommentStyle.FLEX, false),
 				new LineBreakToken("\n"),
+				new JcyoDisabledRegionEndToken(),
 				new JcyoDirectiveStartToken("//#", CommentStyle.LINE),
 				new IdentifierToken("end"),
 				new LineBreakToken("\n")

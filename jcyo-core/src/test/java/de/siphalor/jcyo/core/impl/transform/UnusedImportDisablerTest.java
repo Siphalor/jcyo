@@ -1,16 +1,13 @@
 package de.siphalor.jcyo.core.impl.transform;
 
-import de.siphalor.jcyo.core.api.JcyoOptions;
 import de.siphalor.jcyo.core.impl.CommentStyle;
 import de.siphalor.jcyo.core.impl.stream.TokenStream;
 import de.siphalor.jcyo.core.impl.token.*;
 import org.junit.jupiter.api.Test;
 
-import java.security.Key;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.*;
 
 class UnusedImportDisablerTest {
 
@@ -58,7 +55,7 @@ class UnusedImportDisablerTest {
 				new OperatorToken('>')
 		));
 
-		UnusedImportDisabler unusedImportDisabler = new UnusedImportDisabler(JcyoOptions.builder().build());
+		UnusedImportDisabler unusedImportDisabler = new UnusedImportDisabler();
 		TokenStream result = unusedImportDisabler.apply(tokenStream);
 
 		assertThat(result.stream().toList()).isEqualTo(List.of(
@@ -75,7 +72,7 @@ class UnusedImportDisablerTest {
 				new IdentifierToken("Utils"),
 				new OperatorToken(';'),
 				new LineBreakToken("\n"),
-				new JcyoDisabledStartToken("//- ", CommentStyle.LINE),
+				new JcyoDisabledRegionStartToken(CommentStyle.LINE, ""),
 				new JavaKeywordToken(JavaKeyword.IMPORT),
 				new WhitespaceToken(" "),
 				new JavaKeywordToken(JavaKeyword.STATIC),
@@ -85,6 +82,7 @@ class UnusedImportDisablerTest {
 				new IdentifierToken("whoosh"),
 				new OperatorToken(';'),
 				new LineBreakToken("\n"),
+				new JcyoDisabledRegionEndToken(),
 				new JavaKeywordToken(JavaKeyword.IMPORT),
 				new WhitespaceToken(" "),
 				new IdentifierToken("test"),

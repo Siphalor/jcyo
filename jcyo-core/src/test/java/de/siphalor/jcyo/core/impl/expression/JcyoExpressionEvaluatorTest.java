@@ -1,6 +1,5 @@
 package de.siphalor.jcyo.core.impl.expression;
 
-import de.siphalor.jcyo.core.api.JcyoProcessingException;
 import de.siphalor.jcyo.core.api.JcyoVariables;
 import de.siphalor.jcyo.core.api.value.*;
 import lombok.SneakyThrows;
@@ -41,7 +40,7 @@ class JcyoExpressionEvaluatorTest {
 				JcyoUnaryOperator.Type.MINUS,
 				new JcyoConstant(value)
 		);
-		assertThatThrownBy(() -> evaluator.evaluate(operator)).isInstanceOf(JcyoProcessingException.class);
+		assertThatThrownBy(() -> evaluator.evaluate(operator)).isInstanceOf(JcyoExpressionEvaluationException.class);
 	}
 
 	@ParameterizedTest
@@ -99,7 +98,7 @@ class JcyoExpressionEvaluatorTest {
 				new JcyoConstant(left),
 				new JcyoConstant(right)
 		);
-		assertThatThrownBy(() -> evaluator.evaluate(operator)).isInstanceOf(JcyoProcessingException.class);
+		assertThatThrownBy(() -> evaluator.evaluate(operator)).isInstanceOf(JcyoExpressionEvaluationException.class);
 	}
 
 	static Stream<Arguments> binaryNumberOperatorThrowsParams() {

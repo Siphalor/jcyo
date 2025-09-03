@@ -1,21 +1,18 @@
 package de.siphalor.jcyo.core.impl.transform;
 
-import de.siphalor.jcyo.core.api.JcyoOptions;
-import de.siphalor.jcyo.core.impl.JcyoHelper;
+import de.siphalor.jcyo.core.impl.CommentStyle;
+import de.siphalor.jcyo.core.impl.stream.PeekableTokenStream;
 import de.siphalor.jcyo.core.impl.stream.TokenBuffer;
 import de.siphalor.jcyo.core.impl.stream.TokenStream;
 import de.siphalor.jcyo.core.impl.token.*;
+import lombok.RequiredArgsConstructor;
 
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 
+@RequiredArgsConstructor
 public class UnusedImportDisabler {
-	private final JcyoHelper helper;
-
-	public UnusedImportDisabler(JcyoOptions options) {
-		this.helper = new JcyoHelper(options);
-	}
-
 	public TokenStream apply(TokenStream tokenStream) {
 		TokenBuffer copy = new TokenBuffer();
 		Set<String> usedIdentifiers = collectUsedIdentifiers(copy.copying(tokenStream));
@@ -23,7 +20,7 @@ public class UnusedImportDisabler {
 	}
 
 	private Set<String> collectUsedIdentifiers(TokenStream tokenStream) {
-		tokenStream = new JcyoCommentRemover(tokenStream);
+		tokenStream = new JcyoCleaner(tokenStream);
 		Set<String> identifiers = new HashSet<>();
 		boolean afterDot = false;
 		while (true) {
@@ -60,6 +57,7 @@ public class UnusedImportDisabler {
 	}
 
 	private TokenStream disableUnusedImports(TokenStream source, Set<String> usedIdentifiers) {
+		var peekableSource = PeekableTokenStream.from(source);
 		return new TokenStream() {
 			private final TokenBuffer buffer = new TokenBuffer();
 
@@ -69,25 +67,32 @@ public class UnusedImportDisabler {
 					return buffer.nextToken();
 				}
 
-				Token token = source.nextToken();
+				Token token = peekableSource.nextToken();
 				if (token instanceof JavaKeywordToken(JavaKeyword keyword) && keyword == JavaKeyword.IMPORT) {
 					buffer.pushToken(token);
-					boolean used = buffer.copying(source).stream()
+					boolean used = buffer.copying(peekableSource).stream()
 							.takeWhile(t ->
 									!(t instanceof OperatorToken(int codepoint)) || codepoint == '.' || codepoint == '*'
 							)
-							.filter(t ->
-									t instanceof IdentifierToken
-											|| t instanceof JavaKeywordToken
-											|| t instanceof OperatorToken(int codepoint) && codepoint == '*'
-							)
+							.map(t -> switch (t) {
+								case IdentifierToken (String identifier) -> identifier;
+								case JavaKeywordToken (JavaKeyword kw) -> kw.name();
+								case OperatorToken (int codepoint) when codepoint == '*' -> Character.toString((char) codepoint);
+								default -> null;
+							})
+							.filter(Objects::nonNull)
 							.reduce((_, second) -> second)
-							.map(t -> t.raw().equals("*") || usedIdentifiers.contains(t.raw()))
+							.map(t -> t.equals("*") || usedIdentifiers.contains(t))
 							.orElse(false);
 					if (used) {
 						return buffer.nextToken();
+					} else if (peekableSource.peekToken() instanceof LineBreakToken) {
+						buffer.pushToken(peekableSource.nextToken());
+						buffer.pushToken(new JcyoDisabledRegionEndToken());
+						return new JcyoDisabledRegionStartToken(CommentStyle.LINE, "");
 					} else {
-						return helper.disabledForLine();
+						buffer.pushToken(new JcyoDisabledRegionEndToken());
+						return new JcyoDisabledRegionStartToken(CommentStyle.FLEX, "");
 					}
 				}
 				return token;

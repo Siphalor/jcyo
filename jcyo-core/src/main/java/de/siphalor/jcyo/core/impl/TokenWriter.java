@@ -1,19 +1,30 @@
 package de.siphalor.jcyo.core.impl;
 
+import de.siphalor.jcyo.core.api.JcyoOptions;
 import de.siphalor.jcyo.core.impl.stream.TokenStream;
 import de.siphalor.jcyo.core.impl.token.*;
+import lombok.AccessLevel;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
 
 import java.io.IOException;
 import java.io.Writer;
-import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-@RequiredArgsConstructor
+@RequiredArgsConstructor(access = AccessLevel.PROTECTED)
 public class TokenWriter implements AutoCloseable {
+	private static final Pattern LINE_BREAK_PATTERN = Pattern.compile("\r\n|\r|\n|$");
+
 	private final Writer writer;
-	private final JcyoDisabledState disabledState = new JcyoDisabledState();
+	private final JcyoHelper helper;
+
+	private @Nullable JcyoDisabledState disabledState;
+
+	public TokenWriter(Writer writer, JcyoOptions options) {
+		this(writer, new JcyoHelper(options));
+	}
 
 	public void writeAll(TokenStream tokenStream) throws IOException {
 		Token token;
@@ -27,61 +38,148 @@ public class TokenWriter implements AutoCloseable {
 	}
 
 	public void write(Token token) throws IOException {
+		if (disabledState == null) {
+			writePlain(token);
+			return;
+		}
+		switch (disabledState.disabledStartToken().suggestedCommentStyle()) {
+			case LINE -> writeInDisabledLineMode(token);
+			case FLEX -> writeInDisabledFlexMode(token);
+		}
+	}
+
+	private void writePlain(Token token) throws IOException {
+		assert disabledState == null;
 		switch (token) {
 			case EofToken _ -> {}
-			case JcyoDisabledStartToken startToken -> {
-				disabledState.disabledStartToken(startToken);
-				writer.write(token.raw());
-			}
-			case JcyoEndToken _ when disabledState.disabled() -> {
+			case RepresentableToken representableToken -> writer.write(representableToken.raw());
+			case JcyoDisabledRegionStartToken startToken -> disabledState = new JcyoDisabledState(startToken);
+			default -> throw new IllegalArgumentException("Unexpected token: " + token);
+		}
+	}
+
+	private void writeInDisabledLineMode(Token token) throws IOException {
+		assert disabledState != null;
+		switch (token) {
+			case EofToken _ -> {}
+			case JcyoDisabledRegionEndToken _ -> disabledState = null;
+			case JcyoDisabledRegionStartToken _ -> throw new IllegalArgumentException(
+					"Unexpected disabled region start token, already in disabled region: " + token
+			);
+			case LineBreakToken lineBreakToken -> {
+				writer.write(lineBreakToken.raw());
 				disabledState.reset();
-				writer.write(token.raw());
 			}
-			case LineBreakToken _ -> {
-				disabledState.disabledStartToken().ifPresent(startToken -> {
-					if (startToken.commentStyle() != CommentStyle.LINE) {
-						disabledState.reset();
+			case WhitespaceToken whitespaceToken when !disabledState.disabledPending() ->
+					writer.write(whitespaceToken.raw());
+			case WhitespaceToken whitespaceToken -> {
+				String whitespace = whitespaceToken.raw();
+				String targetIndent = disabledState.disabledStartToken().suggestedIndent();
+				int whitespacePos = 0;
+				while (disabledState.fulfilledIndent() < targetIndent.length() && whitespacePos < whitespace.length()) {
+					if ((whitespace.charAt(whitespacePos) == '\t')
+							!= (targetIndent.charAt(disabledState.fulfilledIndent()) == '\t')) {
+						break;
 					}
-				});
-				writer.write(token.raw());
-			}
-			case PlainJavaCommentToken(String rawComment, CommentStyle commentStyle, _)
-					when commentStyle == CommentStyle.FLEX
-					&& disabledState.disabledStartToken().orElse(null)
-					instanceof JcyoDisabledStartToken(String disabledStartRaw, CommentStyle disabledStyle)
-					&& disabledStyle == CommentStyle.LINE -> {
-				int index = 0;
-				boolean charsInLine = false;
-				boolean commentedLine = true;
-				while (index < rawComment.length()) {
-					char c = rawComment.charAt(index);
-					if (commentedLine) {
-						if (c == '\n' || c == '\r') {
-							commentedLine = false;
-							charsInLine = false;
-						}
-						writer.write(c);
-					} else {
-						if (c == '\n' || c == '\r') {
-							if (charsInLine) {
-								writer.write(disabledStartRaw);
-							}
-							writer.write(c);
-							charsInLine = false;
-						} else if (Character.isWhitespace(c)) {
-							writer.write(c);
-							charsInLine = true;
-						} else {
-							writer.write(disabledStartRaw);
-							commentedLine = true;
-							writer.write(c);
-							charsInLine = true;
-						}
-					}
-					index++;
+
+					writer.write(whitespace.charAt(whitespacePos));
+					whitespacePos++;
+					disabledState.fulfilledIndent(disabledState.fulfilledIndent() + 1);
+				}
+
+				if (whitespacePos < whitespace.length()) {
+					writer.write(helper.disabledForLine());
+					writer.write(whitespace, whitespacePos, whitespace.length() - whitespacePos);
+					disabledState.disabledPending(false);
 				}
 			}
-			default -> writer.write(token.raw());
+			case PlainJavaCommentToken commentToken when commentToken.commentStyle() == CommentStyle.FLEX ->
+					writeFlexCommentInDisabledLineMode(commentToken);
+			case RepresentableToken representableToken when disabledState.disabledPending() -> {
+				writer.write(helper.disabledForLine());
+				disabledState.disabledPending(false);
+				writer.write(representableToken.raw());
+			}
+			case RepresentableToken representableToken -> writer.write(representableToken.raw());
+		}
+	}
+
+	private void writeFlexCommentInDisabledLineMode(PlainJavaCommentToken commentToken) throws IOException {
+		assert disabledState != null;
+		if (disabledState.disabledPending()) {
+			writer.write(helper.disabledForLine());
+			disabledState.disabledPending(false);
+		}
+		String raw = commentToken.raw();
+		Matcher matcher = LINE_BREAK_PATTERN.matcher(raw);
+		int pos = 0;
+		if (matcher.find()) {
+			writer.write(raw, pos, matcher.end() - pos);
+			pos = matcher.end();
+		}
+		String suggestedIndent = disabledState.disabledStartToken().suggestedIndent();
+		while (matcher.find()) {
+			int lineStart = pos;
+			for (; pos < matcher.start(); pos++) {
+				if (pos - lineStart >= suggestedIndent.length()) {
+					if (pos + 1 >= matcher.start()) {
+						writer.write(helper.disabledForLineNoWhitespace());
+					} else {
+						writer.write(helper.disabledForLine());
+					}
+					break;
+				}
+
+				char rawChar = raw.charAt(pos);
+				char suggestedIndentChar = suggestedIndent.charAt(pos - lineStart);
+				if (rawChar == ' ' && suggestedIndentChar != '\t') {
+					writer.write(rawChar);
+				} else if (rawChar == '\t' && suggestedIndentChar == '\t') {
+					writer.write(rawChar);
+				} else {
+					if (pos + 1 >= matcher.start()) {
+						writer.write(helper.disabledForLineNoWhitespace());
+					} else {
+						writer.write(helper.disabledForLine());
+					}
+					break;
+				}
+			}
+			writer.write(raw, pos, matcher.end() - pos);
+			pos = matcher.end();
+		}
+	}
+
+	private void writeInDisabledFlexMode(Token token) throws IOException {
+		assert disabledState != null;
+		switch (token) {
+			case EofToken _ -> {}
+			case JcyoDisabledRegionEndToken _ -> {
+				writer.write(helper.disabledForFlexEnd());
+				disabledState = null;
+			}
+			case JcyoDisabledRegionStartToken _ -> throw new IllegalArgumentException(
+					"Unexpected disabled region start token, already in disabled region: " + token
+			);
+			case JcyoEndToken endToken -> {
+				writer.write(endToken.raw());
+				disabledState.disabledPending(true);
+			}
+			case PlainJavaCommentToken commentToken when commentToken.commentStyle() == CommentStyle.FLEX -> {
+				writer.write(commentToken.raw());
+				disabledState.disabledPending(true);
+			}
+			case LineBreakToken lineBreakToken when disabledState.disabledPending() -> {
+				writer.write(helper.disabledForFlexStartNoWhitespace());
+				disabledState.disabledPending(false);
+				writer.write(lineBreakToken.raw());
+			}
+			case RepresentableToken representableToken when disabledState.disabledPending() -> {
+				writer.write(helper.disabledForFlexStart());
+				disabledState.disabledPending(false);
+				writer.write(representableToken.raw());
+			}
+			case RepresentableToken representableToken -> writer.write(representableToken.raw());
 		}
 	}
 
@@ -92,20 +190,13 @@ public class TokenWriter implements AutoCloseable {
 
 	@Data
 	private static class JcyoDisabledState {
-		private @Nullable JcyoDisabledStartToken disabledStartToken;
-		private boolean disabledPendingOnLine;
-
-		public Optional<JcyoDisabledStartToken> disabledStartToken() {
-			return Optional.ofNullable(disabledStartToken);
-		}
-
-		public boolean disabled() {
-			return disabledStartToken != null;
-		}
+		private final JcyoDisabledRegionStartToken disabledStartToken;
+		private boolean disabledPending = true;
+		private int fulfilledIndent;
 
 		public void reset() {
-			disabledStartToken = null;
-			disabledPendingOnLine = false;
+			disabledPending = true;
+			fulfilledIndent = 0;
 		}
 	}
 }

@@ -9,6 +9,8 @@ import de.siphalor.jcyo.core.impl.token.*;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
 
+import java.util.Optional;
+
 @RequiredArgsConstructor
 public class DirectiveParser {
 	private final PeekableTokenStream tokenStream;
@@ -28,11 +30,10 @@ public class DirectiveParser {
 		commentStyle = startToken.commentStyle();
 		chompWhitespace();
 
-		token = tokenStream.nextToken();
-		if (!isIdentifier(token)) {
-			throw new JcyoParseException("Expected a directive identifier token but got " + token);
-		}
-		String name = token.raw();
+		Token nameToken = tokenStream.nextToken();
+		String name = getIdentifier(nameToken).orElseThrow(() ->
+				new JcyoParseException("Expected a directive identifier token but got " + nameToken)
+		);
 		return switch (name) {
 			case EndDirective.NAME -> parseEndDirective();
 			case GeneratedDirective.NAME -> parseGeneratedDirective();
@@ -49,12 +50,12 @@ public class DirectiveParser {
 		if (token instanceof OperatorToken(int codepoint) && codepoint == ':') {
 			tokenStream.nextToken();
 			chompWhitespace();
-			token = tokenStream.nextToken();
-			if (!isIdentifier(token)) {
-				throw new JcyoParseException("Expected a directive identifier as end directive target but got " + token);
-			}
+			Token nameToken = tokenStream.nextToken();
+			String name = getIdentifier(nameToken).orElseThrow(() -> new JcyoParseException(
+					"Expected a directive identifier as end directive target but got " + nameToken)
+			);
 			chompDirectiveEnd();
-			return new EndDirective(token.raw());
+			return new EndDirective(name);
 		}
 		chompDirectiveEnd();
 		return new EndDirective(null);
@@ -84,8 +85,12 @@ public class DirectiveParser {
 		return new ElseDirective();
 	}
 
-	private boolean isIdentifier(Token token) {
-		return token instanceof IdentifierToken || token instanceof JavaKeywordToken;
+	private Optional<String> getIdentifier(Token token) {
+		return switch (token) {
+			case IdentifierToken (String identifier) -> Optional.of(identifier);
+			case JavaKeywordToken (JavaKeyword keyword) -> Optional.of(keyword.text());
+			default -> Optional.empty();
+		};
 	}
 
 	private void chompDirectiveEnd() {

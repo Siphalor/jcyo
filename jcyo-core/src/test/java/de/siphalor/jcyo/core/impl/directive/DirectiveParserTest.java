@@ -26,7 +26,7 @@ class DirectiveParserTest {
 				new LineBreakToken("\n"),
 				new IdentifierToken("blub")
 		));
-		DirectiveParser parser = new DirectiveParser(new PeekableTokenStream(tokenStream));
+		DirectiveParser parser = new DirectiveParser(PeekableTokenStream.from(tokenStream));
 
 		JcyoDirective directive = parser.nextDirective();
 
@@ -46,7 +46,7 @@ class DirectiveParserTest {
 				new JcyoEndToken(""),
 				new IdentifierToken("blub")
 		));
-		DirectiveParser parser = new DirectiveParser(new PeekableTokenStream(tokenStream));
+		DirectiveParser parser = new DirectiveParser(PeekableTokenStream.from(tokenStream));
 
 		JcyoDirective directive = parser.nextDirective();
 

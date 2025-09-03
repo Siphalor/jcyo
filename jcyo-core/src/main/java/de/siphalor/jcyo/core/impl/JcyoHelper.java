@@ -1,36 +1,40 @@
 package de.siphalor.jcyo.core.impl;
 
 import de.siphalor.jcyo.core.api.JcyoOptions;
-import de.siphalor.jcyo.core.impl.token.JcyoDisabledStartToken;
-import de.siphalor.jcyo.core.impl.token.JcyoEndToken;
 import lombok.Getter;
 
 public class JcyoHelper {
-	private static final JcyoEndToken DISABLED_FOR_FLEX_END = new JcyoEndToken(" */");
-	private static final JcyoEndToken DISABLED_FOR_FLEX_END_NO_WHITESPACE = new JcyoEndToken("*/");
+	private static final String DISABLED_FOR_FLEX_END = " */";
+	private static final String DISABLED_FOR_FLEX_END_NO_WHITESPACE = "*/";
 
 	@Getter
-	private final JcyoDisabledStartToken disabledForLine;
+	private final String disabledForLine;
 	@Getter
-	private final JcyoDisabledStartToken disabledForFlexStart;
+	private final String disabledForLineNoWhitespace;
 	@Getter
-	private final JcyoDisabledStartToken disabledForFlexStartNoWhitespace;
+	private final String disabledForFlexStart;
+	@Getter
+	private final String disabledForFlexStartNoWhitespace;
 
 	public JcyoHelper(JcyoOptions options) {
 		var sb = new StringBuilder(5);
-		sb.append("//").appendCodePoint(options.disabledPrefix()).append(' ');
-		this.disabledForLine = new JcyoDisabledStartToken(sb.toString(), CommentStyle.LINE);
+		sb.append("//").appendCodePoint(options.disabledPrefix());
+		this.disabledForLineNoWhitespace = sb.toString();
+		sb.append(' ');
+		this.disabledForLine = sb.toString();
+
 		sb.setLength(0);
-		sb.append("/*").appendCodePoint(options.disabledPrefix()).append(' ');
-		this.disabledForFlexStart = new JcyoDisabledStartToken(sb.toString(), CommentStyle.FLEX);
-		this.disabledForFlexStartNoWhitespace = new JcyoDisabledStartToken(sb.substring(0, 3), CommentStyle.FLEX);
+		sb.append("/*").appendCodePoint(options.disabledPrefix());
+		this.disabledForFlexStartNoWhitespace = sb.toString();
+		sb.append(' ');
+		this.disabledForFlexStart = sb.toString();
 	}
 
-	public JcyoEndToken disabledForFlexEnd() {
+	public String disabledForFlexEnd() {
 		return DISABLED_FOR_FLEX_END;
 	}
 
-	public JcyoEndToken disabledForFlexEndNoWhitespace() {
+	public String disabledForFlexEndNoWhitespace() {
 		return DISABLED_FOR_FLEX_END_NO_WHITESPACE;
 	}
 }

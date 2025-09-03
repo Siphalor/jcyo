@@ -159,22 +159,22 @@ class JcyoProcessorTest {
 			
 				class Test {
 					public void test() {
-						/*# if false *//*- /* hi
+						/*# if false *//*-  /* hi
 						*//*-
 						// ho
 						/// A javadoc
 						/** another javadoc *//*-
 						/* should stay *//*-
-						*//*# end */
+						 *//*# end */
 						//# if false
 						//- // Test
 						//- /// Javadoc
 						//- /* test */ return;
 						//- /**
-						 //- * What nice
-						 //- * multiline
-						 //- * javadoc
-						 //- */
+						//-  * What nice
+						//-  * multiline
+						//-  * javadoc
+						//-  */
 						//- //hi
 						//# end
 					}

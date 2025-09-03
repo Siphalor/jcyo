@@ -22,7 +22,7 @@ class ExpressionParserTest {
 	@ParameterizedTest
 	@ValueSource(strings = {"", "hi"})
 	void stringLiteral(String string) {
-		ExpressionParser parser = new ExpressionParser(new PeekableTokenStream(TokenStream.from(List.of(
+		ExpressionParser parser = new ExpressionParser(PeekableTokenStream.from(TokenStream.from(List.of(
 				new WhitespaceToken(" "),
 				new StringLiteralToken("\"" + string + "\""),
 				new WhitespaceToken(" ")
@@ -39,7 +39,7 @@ class ExpressionParserTest {
 			"!,NOT"
 	})
 	void simplePrefix(char operator, JcyoUnaryOperator.Type type) {
-		ExpressionParser parser = new ExpressionParser(new PeekableTokenStream(TokenStream.from(List.of(
+		ExpressionParser parser = new ExpressionParser(PeekableTokenStream.from(TokenStream.from(List.of(
 				new WhitespaceToken(" "),
 				new OperatorToken(operator),
 				new WhitespaceToken(" "),
@@ -62,7 +62,7 @@ class ExpressionParserTest {
 			">,GREATER_THAN",
 	})
 	void simpleBinary(char operator, JcyoBinaryOperator.Type type) {
-		ExpressionParser parser = new ExpressionParser(new PeekableTokenStream(TokenStream.from(List.of(
+		ExpressionParser parser = new ExpressionParser(PeekableTokenStream.from(TokenStream.from(List.of(
 				new WhitespaceToken(" "),
 				new NumberLiteralToken("123"),
 				new WhitespaceToken(" "),
@@ -91,7 +91,7 @@ class ExpressionParserTest {
 			">,=,GREATER_THAN_OR_EQUAL",
 	})
 	void doubleBinary(char operator1, char operator2, JcyoBinaryOperator.Type type) {
-		ExpressionParser parser = new ExpressionParser(new PeekableTokenStream(TokenStream.from(List.of(
+		ExpressionParser parser = new ExpressionParser(PeekableTokenStream.from(TokenStream.from(List.of(
 				new WhitespaceToken(" "),
 				new NumberLiteralToken("123"),
 				new WhitespaceToken(" "),
@@ -113,7 +113,7 @@ class ExpressionParserTest {
 
 	@Test
 	void precedence() {
-		ExpressionParser parser = new ExpressionParser(new PeekableTokenStream(TokenStream.from(List.of(
+		ExpressionParser parser = new ExpressionParser(PeekableTokenStream.from(TokenStream.from(List.of(
 				new NumberLiteralToken("123"),
 				new OperatorToken('+'),
 				new NumberLiteralToken("456"),
@@ -149,7 +149,7 @@ class ExpressionParserTest {
 
 	@Test
 	void parenthesis() {
-		ExpressionParser parser = new ExpressionParser(new PeekableTokenStream(TokenStream.from(List.of(
+		ExpressionParser parser = new ExpressionParser(PeekableTokenStream.from(TokenStream.from(List.of(
 				new NumberLiteralToken("123"),
 				new OperatorToken('*'),
 				new OperatorToken('('),

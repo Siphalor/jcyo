@@ -19,13 +19,13 @@ public class JcyoLexer implements AutoCloseable, TokenStream {
 	private final StringBuilder buffer = new StringBuilder();
 
 	private int peek = -1;
-	private @Nullable Token nextToken = null;
+	private @Nullable RepresentableToken nextToken = null;
 	private boolean inDisabledFlexComment = false;
 
 	@Override
 	public Token nextToken() {
 		if (nextToken != null) {
-			Token token = nextToken;
+			RepresentableToken token = nextToken;
 			nextToken = null;
 			return token;
 		}

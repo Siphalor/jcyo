@@ -6,7 +6,7 @@ import de.siphalor.jcyo.core.api.JcyoVariables;
 import de.siphalor.jcyo.core.impl.stream.TokenBuffer;
 import de.siphalor.jcyo.core.impl.stream.TokenStream;
 import de.siphalor.jcyo.core.impl.transform.GeneratedAndDisabledTokenRemover;
-import de.siphalor.jcyo.core.impl.transform.JcyoCommentRemover;
+import de.siphalor.jcyo.core.impl.transform.JcyoCleaner;
 import de.siphalor.jcyo.core.impl.transform.JcyoDirectiveApplier;
 import de.siphalor.jcyo.core.impl.transform.UnusedImportDisabler;
 import org.jspecify.annotations.Nullable;
@@ -30,8 +30,8 @@ public class JcyoProcessor {
 		this.options = options;
 		this.baseDirectory = baseDirectory.normalize().toAbsolutePath();
 		this.cleanOutputDirectory = cleanOutputDirectory;
-		this.directiveApplier = new JcyoDirectiveApplier(options, variables);
-		this.unusedImportDisabler = new UnusedImportDisabler(options);
+		this.directiveApplier = new JcyoDirectiveApplier(variables);
+		this.unusedImportDisabler = new UnusedImportDisabler();
 	}
 
 	public void process(Path inputFile) throws JcyoProcessingException {
@@ -61,7 +61,7 @@ public class JcyoProcessor {
 			} else {
 				TokenBuffer copy = new TokenBuffer();
 				writeToFile(input, copy.copying(processedTokenStream));
-				writeToFile(cleanOutput, new JcyoCommentRemover(copy));
+				writeToFile(cleanOutput, new JcyoCleaner(copy));
 			}
 		} else {
 			assert cleanOutput != null;
@@ -72,7 +72,7 @@ public class JcyoProcessor {
 	TokenStream getProcessedTokensStreamForFile(File input) throws JcyoProcessingException {
 		try (var lexer = new JcyoLexer(new BufferedReader(new FileReader(input)), options)) {
 
-			TokenStream streamWithOldStuffRemoved = new GeneratedAndDisabledTokenRemover(lexer);
+			TokenStream streamWithOldStuffRemoved = new GeneratedAndDisabledTokenRemover(lexer, options);
 			TokenStream streamWithDirectivesApplied = directiveApplier.apply(streamWithOldStuffRemoved);
 			return unusedImportDisabler.apply(streamWithDirectivesApplied);
 
@@ -87,7 +87,7 @@ public class JcyoProcessor {
 
 	void writeToFile(File file, TokenStream tokenStream) throws JcyoProcessingException {
 		file.getParentFile().mkdirs();
-		try (var writer = new TokenWriter(new BufferedWriter(new FileWriter(file)))) {
+		try (var writer = new TokenWriter(new BufferedWriter(new FileWriter(file)), options)) {
 			writer.writeAll(tokenStream);
 		} catch (IOException e) {
 			throw new JcyoProcessingException("Failed to write to file: " + file, e);

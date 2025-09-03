@@ -1,28 +1,42 @@
 package de.siphalor.jcyo.core.impl.stream;
 
 import de.siphalor.jcyo.core.impl.token.Token;
-import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
 
-@RequiredArgsConstructor
-public class PeekableTokenStream implements TokenStream {
-	private final TokenStream inner;
-	private @Nullable Token peek;
-
-	@Override
-	public Token nextToken() {
-		if (peek != null) {
-			Token token = peek;
-			peek = null;
-			return token;
-		}
-		return inner.nextToken();
+public interface PeekableTokenStream extends TokenStream {
+	static PeekableTokenStream from(TokenStream tokenStream) {
+		return new PeekableTokenStreamImpl(tokenStream);
 	}
 
-	public Token peekToken() {
-		if (peek == null) {
-			peek = inner.nextToken();
+	@Override
+	Token nextToken();
+
+	Token peekToken();
+
+	class PeekableTokenStreamImpl implements PeekableTokenStream {
+		private final TokenStream inner;
+		private @Nullable Token peek;
+
+		private PeekableTokenStreamImpl(TokenStream inner) {
+			this.inner = inner;
 		}
-		return peek;
+
+		@Override
+		public Token nextToken() {
+			if (peek != null) {
+				Token token = peek;
+				peek = null;
+				return token;
+			}
+			return inner.nextToken();
+		}
+
+		@Override
+		public Token peekToken() {
+			if (peek == null) {
+				peek = inner.nextToken();
+			}
+			return peek;
+		}
 	}
 }

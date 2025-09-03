@@ -1,6 +1,6 @@
 package de.siphalor.jcyo.core.impl.token;
 
-public record OperatorToken(int codepoint) implements Token {
+public record OperatorToken(int codepoint) implements RepresentableToken {
 	@Override
 	public String raw() {
 		return new String(new int[] { codepoint }, 0, 1);

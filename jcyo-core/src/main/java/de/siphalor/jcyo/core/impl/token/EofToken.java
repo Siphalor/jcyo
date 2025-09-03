@@ -10,9 +10,4 @@ public final class EofToken implements Token {
 	public static EofToken instance() {
 		return INSTANCE;
 	}
-
-	@Override
-	public String raw() {
-		throw new UnsupportedOperationException();
-	}
 }
