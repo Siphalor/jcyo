@@ -2,15 +2,17 @@ plugins {
 	`maven-publish`
 }
 
+val siphalorMavenUser = project.property("siphalor.maven.user") as String?
+val siphalorMavenPassword = project.property("siphalor.maven.password") as String?
 publishing {
 	repositories {
-		if (project.hasProperty("siphalor.maven.user")) {
+		if (siphalorMavenUser != null && siphalorMavenPassword != null) {
 			maven {
 				name = "siphalor"
 				url = uri("https://maven.siphalor.de/upload.php")
 				credentials {
-					username = project.property("siphalor.maven.user") as String
-					password = project.property("siphalor.maven.password") as String
+					username = siphalorMavenUser
+					password = siphalorMavenPassword
 				}
 			}
 		}
