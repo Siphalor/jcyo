@@ -192,6 +192,42 @@ class JcyoProcessorTest {
 				""");
 	}
 
+	@Test
+	@SneakyThrows
+	void processStableLineComments() {
+		JcyoProcessor processor = new JcyoProcessor(
+				new JcyoVariables(),
+				JcyoOptions.builder().updateInput(true).build(),
+				inputDir,
+				null
+		);
+
+		File input = inputDir.resolve("Test.java").toFile();
+		createInputFile(
+				input, """
+				\t//# if false
+				\t//- // Hello World!
+				\t//- while (true) {
+				\t//- \tSystem.out.println("Hello World!");
+				\t//- \t// Bye World!
+				\t//- }
+				\t//# end
+				"""
+		);
+
+		processor.process(input.toPath());
+
+		assertThat(input).isFile().content().isEqualTo("""
+				\t//# if false
+				\t//- // Hello World!
+				\t//- while (true) {
+				\t//- \tSystem.out.println("Hello World!");
+				\t//- \t// Bye World!
+				\t//- }
+				\t//# end
+				""");
+	}
+
 	@SneakyThrows
 	private void createInputFile(File file, String content) {
 		try (var writer = new BufferedWriter(new FileWriter(file))) {

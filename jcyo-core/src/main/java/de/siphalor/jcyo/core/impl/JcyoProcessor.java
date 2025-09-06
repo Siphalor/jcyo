@@ -5,10 +5,7 @@ import de.siphalor.jcyo.core.api.JcyoProcessingException;
 import de.siphalor.jcyo.core.api.JcyoVariables;
 import de.siphalor.jcyo.core.impl.stream.TokenBuffer;
 import de.siphalor.jcyo.core.impl.stream.TokenStream;
-import de.siphalor.jcyo.core.impl.transform.GeneratedAndDisabledTokenRemover;
-import de.siphalor.jcyo.core.impl.transform.JcyoCleaner;
-import de.siphalor.jcyo.core.impl.transform.JcyoDirectiveApplier;
-import de.siphalor.jcyo.core.impl.transform.UnusedImportDisabler;
+import de.siphalor.jcyo.core.impl.transform.*;
 import org.jspecify.annotations.Nullable;
 
 import java.io.*;
@@ -72,7 +69,10 @@ public class JcyoProcessor {
 	TokenStream getProcessedTokensStreamForFile(File input) throws JcyoProcessingException {
 		try (var lexer = new JcyoLexer(new BufferedReader(new FileReader(input)), options)) {
 
-			TokenStream streamWithOldStuffRemoved = new GeneratedAndDisabledTokenRemover(lexer, options);
+			TokenStream streamWithOldStuffRemoved = new GeneratedAndDisabledTokenRemover(
+					new JcyoUnpadder(lexer),
+					options
+			);
 			TokenStream streamWithDirectivesApplied = directiveApplier.apply(streamWithOldStuffRemoved);
 			return unusedImportDisabler.apply(streamWithDirectivesApplied);
 

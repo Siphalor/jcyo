@@ -23,9 +23,9 @@ class ExpressionParserTest {
 	@ValueSource(strings = {"", "hi"})
 	void stringLiteral(String string) {
 		ExpressionParser parser = new ExpressionParser(PeekableTokenStream.from(TokenStream.from(List.of(
-				new WhitespaceToken(" "),
+				new WhitespaceToken(' '),
 				new StringLiteralToken("\"" + string + "\""),
-				new WhitespaceToken(" ")
+				new WhitespaceToken(' ')
 		))));
 
 		JcyoExpression expression = parser.nextExpression();
@@ -40,11 +40,11 @@ class ExpressionParserTest {
 	})
 	void simplePrefix(char operator, JcyoUnaryOperator.Type type) {
 		ExpressionParser parser = new ExpressionParser(PeekableTokenStream.from(TokenStream.from(List.of(
-				new WhitespaceToken(" "),
+				new WhitespaceToken(' '),
 				new OperatorToken(operator),
-				new WhitespaceToken(" "),
+				new WhitespaceToken(' '),
 				new NumberLiteralToken("123"),
-				new WhitespaceToken(" ")
+				new WhitespaceToken(' ')
 		))));
 
 		JcyoExpression expression = parser.nextExpression();
@@ -63,13 +63,13 @@ class ExpressionParserTest {
 	})
 	void simpleBinary(char operator, JcyoBinaryOperator.Type type) {
 		ExpressionParser parser = new ExpressionParser(PeekableTokenStream.from(TokenStream.from(List.of(
-				new WhitespaceToken(" "),
+				new WhitespaceToken(' '),
 				new NumberLiteralToken("123"),
-				new WhitespaceToken(" "),
+				new WhitespaceToken(' '),
 				new OperatorToken(operator),
-				new WhitespaceToken(" "),
+				new WhitespaceToken(' '),
 				new NumberLiteralToken("456"),
-				new WhitespaceToken(" ")
+				new WhitespaceToken(' ')
 		))));
 
 		JcyoExpression expression = parser.nextExpression();
@@ -92,14 +92,14 @@ class ExpressionParserTest {
 	})
 	void doubleBinary(char operator1, char operator2, JcyoBinaryOperator.Type type) {
 		ExpressionParser parser = new ExpressionParser(PeekableTokenStream.from(TokenStream.from(List.of(
-				new WhitespaceToken(" "),
+				new WhitespaceToken(' '),
 				new NumberLiteralToken("123"),
-				new WhitespaceToken(" "),
+				new WhitespaceToken(' '),
 				new OperatorToken(operator1),
 				new OperatorToken(operator2),
-				new WhitespaceToken(" "),
+				new WhitespaceToken(' '),
 				new NumberLiteralToken("456"),
-				new WhitespaceToken(" ")
+				new WhitespaceToken(' ')
 		))));
 
 		JcyoExpression expression = parser.nextExpression();
@@ -153,11 +153,11 @@ class ExpressionParserTest {
 				new NumberLiteralToken("123"),
 				new OperatorToken('*'),
 				new OperatorToken('('),
-				new WhitespaceToken(" "),
+				new WhitespaceToken(' '),
 				new NumberLiteralToken("456"),
 				new OperatorToken('+'),
 				new NumberLiteralToken("789"),
-				new WhitespaceToken(" "),
+				new WhitespaceToken(' '),
 				new OperatorToken(')'),
 				new OperatorToken('*'),
 				new NumberLiteralToken("12")

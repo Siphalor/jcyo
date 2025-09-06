@@ -94,7 +94,6 @@ public class JcyoLexer implements AutoCloseable, TokenStream {
 				case '*' -> {
 					buffer.appendCodePoint(eat());
 					if (peek() == '/') {
-						// This should only be the end of a JCYO directive
 						buffer.appendCodePoint(eat());
 						// this ends disabled flex comments implicitly
 						if (inDisabledFlexComment) {
@@ -166,10 +165,10 @@ public class JcyoLexer implements AutoCloseable, TokenStream {
 				case '.' -> {
 					eat();
 					if (Character.isDigit(peek())) {
+						buffer.appendCodePoint('.');
 						chompNumeric();
 						return new NumberLiteralToken(takeFromBuffer());
 					} else {
-						clearBuffer();
 						return new OperatorToken('.');
 					}
 				}
@@ -186,10 +185,8 @@ public class JcyoLexer implements AutoCloseable, TokenStream {
 							return new IdentifierToken(identifier);
 						}
 					} else if (Character.isWhitespace(codepoint)) {
-						do {
-							buffer.appendCodePoint(eat());
-						} while (Character.isWhitespace(peek()));
-						return new WhitespaceToken(takeFromBuffer());
+						eat();
+						return new WhitespaceToken(codepoint);
 					} else if (Character.isDigit(codepoint)) {
 						chompNumeric();
 						return new NumberLiteralToken(takeFromBuffer());

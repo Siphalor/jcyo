@@ -42,17 +42,7 @@ public class GeneratedAndDisabledTokenRemover implements TokenStream {
 				}
 				case JcyoDisabledStartToken _ -> {
 					inner.nextToken();
-					chompWhitespace();
 					inDisabledSection = true;
-				}
-				case WhitespaceToken _ when inDisabledSection -> {
-					buffer.pushToken(inner.nextToken());
-					chompWhitespaceToBuffer();
-					if (inner.peekToken() instanceof JcyoEndToken) {
-						inner.nextToken();
-						buffer.clear();
-						inDisabledSection = false;
-					}
 				}
 				case JcyoEndToken _ when inDisabledSection -> {
 					inner.nextToken();
@@ -83,29 +73,6 @@ public class GeneratedAndDisabledTokenRemover implements TokenStream {
 				return;
 			}
 			inner.nextToken();
-		}
-	}
-
-	private void chompWhitespace() {
-		while (true) {
-			Token token = inner.peekToken();
-			if (token instanceof WhitespaceToken) {
-				inner.nextToken();
-			} else {
-				break;
-			}
-		}
-	}
-
-	private void chompWhitespaceToBuffer() {
-		Token token;
-		while (true) {
-			token = inner.peekToken();
-			if (token instanceof WhitespaceToken) {
-				buffer.pushToken(inner.nextToken());
-			} else {
-				break;
-			}
 		}
 	}
 

@@ -31,26 +31,26 @@ class JcyoLexerTest {
 
 		assertThat(lexer.stream().toList()).isEqualTo(List.of(
 				new JavaKeywordToken(JavaKeyword.PACKAGE),
-				new WhitespaceToken(" "),
+				new WhitespaceToken(' '),
 				new IdentifierToken("test"),
 				new OperatorToken('.'),
 				new IdentifierToken("abc"),
 				new OperatorToken(';'),
 				new LineBreakToken("\n"),
 				new JcyoDisabledStartToken("//-", CommentStyle.LINE),
-				new WhitespaceToken(" "),
+				new WhitespaceToken(' '),
 				new JavaKeywordToken(JavaKeyword.IMPORT),
-				new WhitespaceToken(" "),
+				new WhitespaceToken(' '),
 				new JavaKeywordToken(JavaKeyword.STATIC),
-				new WhitespaceToken(" "),
+				new WhitespaceToken(' '),
 				new IdentifierToken("hi"),
 				new OperatorToken(';'),
 				new LineBreakToken("\n"),
 				new LineBreakToken("\n"),
 				new JcyoDirectiveStartToken("//#", CommentStyle.LINE),
-				new WhitespaceToken(" "),
+				new WhitespaceToken(' '),
 				new JavaKeywordToken(JavaKeyword.IF),
-				new WhitespaceToken(" "),
+				new WhitespaceToken(' '),
 				new JavaKeywordToken(JavaKeyword.FALSE),
 				new LineBreakToken("\n"),
 				new NumberLiteralToken("1E100"),
@@ -58,7 +58,7 @@ class JcyoLexerTest {
 				new StringLiteralToken("\"test\""),
 				new LineBreakToken("\n"),
 				new JcyoDirectiveStartToken("//#", CommentStyle.LINE),
-				new WhitespaceToken(" "),
+				new WhitespaceToken(' '),
 				new IdentifierToken("end"),
 				new OperatorToken(':'),
 				new JavaKeywordToken(JavaKeyword.IF),
@@ -69,7 +69,7 @@ class JcyoLexerTest {
 	@Test
 	void testDisabledFlexCommentsImplicitEnds() {
 		JcyoLexer lexer = new JcyoLexer(
-				new StringReader("/*-test/* blub *//*- /*#if false*//*#end*/"),
+				new StringReader("/*-test/* blub *//*- /*#if false *//*#end*/"),
 				JcyoOptions.builder().build()
 		);
 
@@ -79,11 +79,12 @@ class JcyoLexerTest {
 				new PlainJavaCommentToken("/* blub */", CommentStyle.FLEX, false),
 				new JcyoEndToken(""), // implicit
 				new JcyoDisabledStartToken("/*-", CommentStyle.FLEX),
-				new WhitespaceToken(" "),
+				new WhitespaceToken(' '),
 				new JcyoDirectiveStartToken("/*#", CommentStyle.FLEX),
 				new JavaKeywordToken(JavaKeyword.IF),
-				new WhitespaceToken(" "),
+				new WhitespaceToken(' '),
 				new JavaKeywordToken(JavaKeyword.FALSE),
+				new WhitespaceToken(' '),
 				new JcyoEndToken("*/"), // directive end
 				new JcyoEndToken(""), // implicit
 				new JcyoDirectiveStartToken("/*#", CommentStyle.FLEX),

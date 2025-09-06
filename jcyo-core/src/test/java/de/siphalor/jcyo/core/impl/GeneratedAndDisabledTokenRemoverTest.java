@@ -21,16 +21,19 @@ class GeneratedAndDisabledTokenRemoverTest {
 				startToken,
 				new JcyoDirectiveStartToken("", CommentStyle.LINE),
 				new IdentifierToken("generated"),
-				new WhitespaceToken("   "),
+				new WhitespaceToken(' '),
+				new WhitespaceToken(' '),
+				new WhitespaceToken(' '),
 				new LineBreakToken("\n"),
 				new IdentifierToken("blub"),
 				new JcyoDirectiveStartToken("", CommentStyle.FLEX),
 				new IdentifierToken("end"),
-				new WhitespaceToken(" "),
+				new WhitespaceToken(' '),
 				new OperatorToken(':'),
 				new LineBreakToken("\r"),
 				new IdentifierToken("generated"),
-				new WhitespaceToken("  "),
+				new WhitespaceToken(' '),
+				new WhitespaceToken(' '),
 				new JcyoEndToken(""),
 				endToken
 		));
@@ -64,11 +67,11 @@ class GeneratedAndDisabledTokenRemoverTest {
 	void removeFlexDisabledTokenWithWhitespace() {
 		TokenStream tokens = TokenStream.from(List.of(
 				new JcyoDisabledStartToken("", CommentStyle.FLEX),
-				new WhitespaceToken(" "),
-				new WhitespaceToken(" "),
+				new WhitespaceToken(' '),
+				new WhitespaceToken(' '),
 				new IdentifierToken("token"),
-				new WhitespaceToken(" "),
-				new WhitespaceToken(" "),
+				new WhitespaceToken(' '),
+				new WhitespaceToken(' '),
 				new JcyoEndToken("")
 		));
 
@@ -77,7 +80,13 @@ class GeneratedAndDisabledTokenRemoverTest {
 				JcyoOptions.builder().build()
 		);
 
-		assertThat(remover.stream().toList()).isEqualTo(List.of(new IdentifierToken("token")));
+		assertThat(remover.stream().toList()).isEqualTo(List.of(
+				new WhitespaceToken(' '),
+				new WhitespaceToken(' '),
+				new IdentifierToken("token"),
+				new WhitespaceToken(' '),
+				new WhitespaceToken(' ')
+		));
 	}
 
 	@Test

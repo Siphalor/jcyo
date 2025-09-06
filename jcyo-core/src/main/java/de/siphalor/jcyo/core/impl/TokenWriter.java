@@ -72,25 +72,16 @@ public class TokenWriter implements AutoCloseable {
 			}
 			case WhitespaceToken whitespaceToken when !disabledState.disabledPending() ->
 					writer.write(whitespaceToken.raw());
-			case WhitespaceToken whitespaceToken -> {
-				String whitespace = whitespaceToken.raw();
-				String targetIndent = disabledState.disabledStartToken().suggestedIndent();
-				int whitespacePos = 0;
-				while (disabledState.fulfilledIndent() < targetIndent.length() && whitespacePos < whitespace.length()) {
-					if ((whitespace.charAt(whitespacePos) == '\t')
-							!= (targetIndent.charAt(disabledState.fulfilledIndent()) == '\t')) {
-						break;
-					}
-
-					writer.write(whitespace.charAt(whitespacePos));
-					whitespacePos++;
+			case WhitespaceToken whitespaceToken when
+					disabledState.fulfilledIndent() < disabledState.disabledStartToken().suggestedIndent().length() -> {
+				String suggestedIndent = disabledState.disabledStartToken().suggestedIndent();
+				if ((whitespaceToken.codepoint() == '\t') == (suggestedIndent.charAt(disabledState.fulfilledIndent()) == '\t')) {
 					disabledState.fulfilledIndent(disabledState.fulfilledIndent() + 1);
-				}
-
-				if (whitespacePos < whitespace.length()) {
+					writer.write(whitespaceToken.raw());
+				} else {
 					writer.write(helper.disabledForLine());
-					writer.write(whitespace, whitespacePos, whitespace.length() - whitespacePos);
 					disabledState.disabledPending(false);
+					writer.write(whitespaceToken.raw());
 				}
 			}
 			case PlainJavaCommentToken commentToken when commentToken.commentStyle() == CommentStyle.FLEX ->

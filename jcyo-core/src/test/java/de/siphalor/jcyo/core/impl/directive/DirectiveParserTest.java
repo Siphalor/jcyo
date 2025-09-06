@@ -18,11 +18,11 @@ class DirectiveParserTest {
 	void ifLineMode() {
 		TokenStream tokenStream = TokenStream.from(List.of(
 				new JcyoDirectiveStartToken("", CommentStyle.LINE),
-				new WhitespaceToken(" "),
+				new WhitespaceToken(' '),
 				new JavaKeywordToken(JavaKeyword.IF),
-				new WhitespaceToken(" "),
+				new WhitespaceToken(' '),
 				new JavaKeywordToken(JavaKeyword.TRUE),
-				new WhitespaceToken(" "),
+				new WhitespaceToken(' '),
 				new LineBreakToken("\n"),
 				new IdentifierToken("blub")
 		));
@@ -38,11 +38,11 @@ class DirectiveParserTest {
 	void ifFlexMode() {
 		TokenStream tokenStream = TokenStream.from(List.of(
 				new JcyoDirectiveStartToken("", CommentStyle.FLEX),
-				new WhitespaceToken(" "),
+				new WhitespaceToken(' '),
 				new JavaKeywordToken(JavaKeyword.IF),
-				new WhitespaceToken(" "),
+				new WhitespaceToken(' '),
 				new JavaKeywordToken(JavaKeyword.TRUE),
-				new WhitespaceToken(" "),
+				new WhitespaceToken(' '),
 				new JcyoEndToken(""),
 				new IdentifierToken("blub")
 		));
