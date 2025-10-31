@@ -17,4 +17,17 @@ publishing {
 			}
 		}
 	}
+
+	publications.all {
+		if (this is MavenPublication) {
+			pom {
+				name = project.property("module.name") as String
+				description = project.property("module.description") as String
+				url = project.property("git.url") as String
+				scm {
+					url = project.property("git.url") as String
+				}
+			}
+		}
+	}
 }
