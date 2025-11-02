@@ -10,6 +10,7 @@ import org.junit.jupiter.api.io.TempDir;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
+import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -226,6 +227,25 @@ class JcyoProcessorTest {
 				\t//- }
 				\t//# end
 				""");
+	}
+
+	@Test
+	@SneakyThrows
+	void processUnchanged() {
+		JcyoProcessor processor = new JcyoProcessor(
+				new JcyoVariables(),
+				JcyoOptions.builder().updateInput(true).build(),
+				inputDir,
+				cleanOutputDir
+		);
+
+		File input = inputDir.resolve("Test.java").toFile();
+		File resource = new File(getClass().getResource("JcyoProcessorTest.unchanged.java").toURI());
+		Files.copy(resource.toPath(), input.toPath());
+
+		processor.process(input.toPath());
+
+		assertThat(input).isFile().hasSameTextualContentAs(resource);
 	}
 
 	@SneakyThrows

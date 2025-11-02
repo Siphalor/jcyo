@@ -113,7 +113,8 @@ public class JcyoLexer implements AutoCloseable, TokenStream {
 				}
 				case '"' -> {
 					buffer.appendCodePoint(eat());
-					if (eatToBuffer() == '"') {
+					if (peek() == '"') {
+						eatToBuffer();
 						if (eatToBuffer() == '"') {
 							int quoteCount = 0;
 							while (true) {

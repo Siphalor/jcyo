@@ -92,4 +92,39 @@ class JcyoLexerTest {
 				new JcyoEndToken("*/") // directive end
 		));
 	}
+
+	@Test
+	void testEscapedQuotes() {
+		JcyoLexer lexer = new JcyoLexer(
+				new StringReader("""
+						"Failed to resolve mapping for entry \\"" + mappedEntry.name() + "\\" at \\""
+							+ translationKey + "\\". Entry will be ignored in UI.\""""),
+				JcyoOptions.builder().build()
+		);
+
+		assertThat(lexer.stream().toList()).isEqualTo(List.of(
+				new StringLiteralToken("\"Failed to resolve mapping for entry \\\"\""),
+				new WhitespaceToken(' '),
+				new OperatorToken('+'),
+				new WhitespaceToken(' '),
+				new IdentifierToken("mappedEntry"),
+				new OperatorToken('.'),
+				new IdentifierToken("name"),
+				new OperatorToken('('),
+				new OperatorToken(')'),
+				new WhitespaceToken(' '),
+				new OperatorToken('+'),
+				new WhitespaceToken(' '),
+				new StringLiteralToken("\"\\\" at \\\"\""),
+				new LineBreakToken("\n"),
+				new WhitespaceToken('\t'),
+				new OperatorToken('+'),
+				new WhitespaceToken(' '),
+				new IdentifierToken("translationKey"),
+				new WhitespaceToken(' '),
+				new OperatorToken('+'),
+				new WhitespaceToken(' '),
+				new StringLiteralToken("\"\\\". Entry will be ignored in UI.\"")
+		));
+	}
 }
