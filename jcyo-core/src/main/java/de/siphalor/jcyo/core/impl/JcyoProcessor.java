@@ -3,6 +3,7 @@ package de.siphalor.jcyo.core.impl;
 import de.siphalor.jcyo.core.api.JcyoOptions;
 import de.siphalor.jcyo.core.api.JcyoProcessingException;
 import de.siphalor.jcyo.core.api.JcyoVariables;
+import de.siphalor.jcyo.core.impl.stream.PeekableTokenStream;
 import de.siphalor.jcyo.core.impl.stream.TokenBuffer;
 import de.siphalor.jcyo.core.impl.stream.TokenStream;
 import de.siphalor.jcyo.core.impl.transform.*;
@@ -22,6 +23,7 @@ public class JcyoProcessor {
 	private final JcyoOptions options;
 	private final Path baseDirectory;
 	private final @Nullable Path cleanOutputDirectory;
+	private final @Nullable JcyoImportReorderer importReorderer;
 	private final JcyoDirectiveApplier directiveApplier;
 	private final UnusedImportDisabler unusedImportDisabler;
 
@@ -34,6 +36,11 @@ public class JcyoProcessor {
 		this.options = options;
 		this.baseDirectory = baseDirectory.normalize().toAbsolutePath();
 		this.cleanOutputDirectory = cleanOutputDirectory;
+		if (options.importOrder() == null) {
+			this.importReorderer = null;
+		} else {
+			this.importReorderer = new JcyoImportReorderer(options.importOrder());
+		}
 		this.directiveApplier = new JcyoDirectiveApplier(variables);
 		this.unusedImportDisabler = new UnusedImportDisabler();
 	}
@@ -97,12 +104,15 @@ public class JcyoProcessor {
 	TokenStream getProcessedTokensStreamForFile(Reader input) throws JcyoProcessingException {
 		try (var lexer = new JcyoLexer(input, options)) {
 
-			TokenStream streamWithOldStuffRemoved = new GeneratedAndDisabledTokenRemover(
+			TokenStream tokenStream = new GeneratedAndDisabledTokenRemover(
 					new JcyoUnpadder(lexer),
 					options
 			);
-			TokenStream streamWithDirectivesApplied = directiveApplier.apply(streamWithOldStuffRemoved);
-			return unusedImportDisabler.apply(streamWithDirectivesApplied);
+			if (importReorderer != null) {
+				tokenStream = importReorderer.apply(PeekableTokenStream.from(tokenStream));
+			}
+			tokenStream = directiveApplier.apply(tokenStream);
+			return unusedImportDisabler.apply(tokenStream);
 
 		} catch (JcyoParseException e) {
 			throw new JcyoProcessingException("Failed to parse input file: " + input, e);

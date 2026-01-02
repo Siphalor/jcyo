@@ -4,12 +4,22 @@ import de.siphalor.jcyo.core.impl.token.EofToken;
 import de.siphalor.jcyo.core.impl.token.Token;
 
 import java.util.ArrayDeque;
+import java.util.Iterator;
 import java.util.SequencedCollection;
 import java.util.stream.Stream;
 
 public interface TokenStream {
 	static TokenStream from(SequencedCollection<Token> tokens) {
 		return new StaticTokenStream(new ArrayDeque<>(tokens));
+	}
+
+	static TokenStream from(Iterator<Token> tokens) {
+		return () -> {
+			if (tokens.hasNext()) {
+				return tokens.next();
+			}
+			return EofToken.instance();
+		};
 	}
 
 	Token nextToken();

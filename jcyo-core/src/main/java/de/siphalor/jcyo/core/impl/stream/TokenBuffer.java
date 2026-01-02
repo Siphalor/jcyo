@@ -11,6 +11,12 @@ public class TokenBuffer implements TokenStream {
 	private boolean eofPushed;
 	private boolean eofReached;
 
+	public void finish() {
+		if (!eofPushed) {
+			pushToken(EofToken.instance());
+		}
+	}
+
 	public void pushToken(Token token) {
 		if (eofPushed) {
 			throw new IllegalStateException("EOF token already pushed, but got: " + token);

@@ -3,9 +3,11 @@ package de.siphalor.jcyo.gradle
 import de.siphalor.jcyo.core.api.Jcyo
 import de.siphalor.jcyo.core.api.JcyoOptions
 import de.siphalor.jcyo.core.api.JcyoVariables
+import de.siphalor.jcyo.core.api.import_order.ImportOrder
 import de.siphalor.jcyo.core.api.value.JcyoValue
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
@@ -24,6 +26,9 @@ abstract class JcyoTask : DefaultTask() {
 	@get:Input
 	abstract val variables: MapProperty<String, Any>
 
+	@get:Input
+	abstract val importOrder: ListProperty<String>
+
 	@get:OutputDirectory
 	@get:Optional
 	abstract val cleanOutputDirectory: DirectoryProperty
@@ -31,6 +36,7 @@ abstract class JcyoTask : DefaultTask() {
 	init {
 		updateInputFiles.convention(true)
 		variables.convention(mapOf())
+		importOrder.convention(listOf())
 	}
 
 	@TaskAction
@@ -40,7 +46,10 @@ abstract class JcyoTask : DefaultTask() {
 
 		Jcyo.builder()
 			.variables(jcyoVariables)
-			.options(JcyoOptions.builder().updateInput(updateInputFiles.get()).build())
+			.options(JcyoOptions.builder()
+				.updateInput(updateInputFiles.get())
+				.importOrder(importOrder.get().ifEmpty { null }?.let { elements -> ImportOrder.fromSpotless(elements) })
+				.build())
 			.baseDirectory(inputDirectory.get().asFile.toPath())
 			.cleanOutputDirectory(cleanOutputDirectory.orNull?.asFile?.toPath())
 			.build()
