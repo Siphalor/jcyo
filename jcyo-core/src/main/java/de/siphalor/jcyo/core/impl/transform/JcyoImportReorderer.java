@@ -49,14 +49,17 @@ public class JcyoImportReorderer {
 			}
 		}
 
-		Section section = processSection(input).section();
+		SectionProcessResult sectionProcessResult = processSection(input);
+		Section section = sectionProcessResult.section();
 
 		List<Stream<Token>> tokenStreams = new ArrayList<>(4);
 		tokenStreams.add(buffer.stream());
-		tokenStreams.add(section.tokens());
+		tokenStreams.add(section.tokens().stream());
 
 		if (!(input.peekToken() instanceof EofToken)) {
-			tokenStreams.add(Stream.of(LineBreakToken.defaultInstance()));
+			if (!section.tokens().isEmpty()) {
+				tokenStreams.add(Stream.of(LineBreakToken.defaultInstance()));
+			}
 			tokenStreams.add(input.stream());
 		}
 		return TokenStream.from(tokenStreams.stream().flatMap(Function.identity()).iterator());
@@ -167,16 +170,18 @@ public class JcyoImportReorderer {
 				.map(Import.class::cast)
 				.orElse(null);
 
-		endBuffer.pushToken(EofToken.instance());
+		var resultTokens = orderAndRenderElements(elements);
 
-		return new SectionProcessResult(
-				new Section(Stream.concat(orderAndRenderElements(elements), endBuffer.stream()), firstImport, lastImport),
-				endDirective
-		);
+		if (!endBuffer.isEmpty()) {
+			endBuffer.finish();
+			endBuffer.stream().forEach(resultTokens::add);
+		}
+
+		return new SectionProcessResult(new Section(resultTokens, firstImport, lastImport), endDirective);
 	}
 
-	private Stream<Token> orderAndRenderElements(SequencedCollection<Element> elements) {
-		Stream.Builder<Token> streamBuilder = Stream.builder();
+	private SequencedCollection<Token> orderAndRenderElements(SequencedCollection<Element> elements) {
+		List<Token> result = new ArrayList<>();
 
 		int lastOrderIndex = -Integer.MAX_VALUE;
 		String lastImportPath = null; // used to detect simple duplicate imports
@@ -189,7 +194,7 @@ public class JcyoImportReorderer {
 								importOrder.elements().subList(lastOrderIndex, _import.orderIndex())
 										.contains(ImportOrderElement.blankLine())
 						) {
-							streamBuilder.add(LineBreakToken.defaultInstance());
+							result.add(LineBreakToken.defaultInstance());
 						}
 					} else if (
 							lastImportPath != null
@@ -199,25 +204,25 @@ public class JcyoImportReorderer {
 						// skip duplicate imports
 						continue;
 					}
-					_import.tokens().forEach(streamBuilder::add);
+					result.addAll(_import.tokens());
 
 					lastOrderIndex = _import.orderIndex();
 					lastImportPath = _import.importPath;
 
-					streamBuilder.add(LineBreakToken.defaultInstance());
+					result.add(LineBreakToken.defaultInstance());
 				}
 				case Section section -> {
 					if (section.firstImport == null) {
-						streamBuilder.add(LineBreakToken.defaultInstance());
+						result.add(LineBreakToken.defaultInstance());
 					} else if (lastOrderIndex >= 0 && section.firstImport.orderIndex() != lastOrderIndex) {
 						if (
 								importOrder.elements().subList(lastOrderIndex, section.firstImport.orderIndex())
 										.contains(ImportOrderElement.blankLine())
 						) {
-							streamBuilder.add(LineBreakToken.defaultInstance());
+							result.add(LineBreakToken.defaultInstance());
 						}
 					}
-					section.tokens().forEach(streamBuilder::add);
+					result.addAll(section.tokens());
 
 					if (section.lastImport != null) {
 						lastOrderIndex = section.lastImport.orderIndex();
@@ -228,7 +233,7 @@ public class JcyoImportReorderer {
 			}
 		}
 
-		return streamBuilder.build();
+		return result;
 	}
 
 	private Import parseImport(PeekableTokenStream input) {
@@ -273,7 +278,7 @@ public class JcyoImportReorderer {
 
 		var path = pathBuilder.toString();
 		var orderIndex = getImportOrderIndex(isStatic, path);
-		return new Import(importTokens.stream(), isStatic, path, orderIndex);
+		return new Import(importTokens, isStatic, path, orderIndex);
 	}
 
 	private int getImportOrderIndex(boolean isStatic, String importPath) {
@@ -319,10 +324,10 @@ public class JcyoImportReorderer {
 		};
 	}
 
-	record Import(Stream<Token> tokens, boolean isStatic, String importPath, int orderIndex) implements Element {
+	record Import(SequencedCollection<Token> tokens, boolean isStatic, String importPath, int orderIndex) implements Element {
 	}
 
-	record Section(Stream<Token> tokens, @Nullable Import firstImport, @Nullable Import lastImport) implements Element {
+	record Section(SequencedCollection<Token> tokens, @Nullable Import firstImport, @Nullable Import lastImport) implements Element {
 	}
 
 	@RequiredArgsConstructor
@@ -335,7 +340,7 @@ public class JcyoImportReorderer {
 
 		Section build() {
 			buffer.finish();
-			return new Section(buffer.stream(), firstImport, lastImport);
+			return new Section(buffer.stream().toList(), firstImport, lastImport);
 		}
 
 		void append(Section section) {
