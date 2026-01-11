@@ -336,7 +336,7 @@ class JcyoImportReordererTest {
 
 	@Test
 	void noImports() {
-		var result = reorderer.apply(PeekableTokenStream.from(TokenStream.from(List.of(
+		List<Token> tokens = List.of(
 				new JavaKeywordToken(JavaKeyword.PACKAGE),
 				new WhitespaceToken(' '),
 				new IdentifierToken("test"),
@@ -348,20 +348,64 @@ class JcyoImportReordererTest {
 				new IdentifierToken("Test"),
 				new OperatorToken('{'),
 				new OperatorToken('}')
-		))));
+		);
 
-		assertThat(result.stream().toList()).isEqualTo(List.of(
+		var result = reorderer.apply(PeekableTokenStream.from(TokenStream.from(tokens)));
+		assertThat(result.stream().toList()).isEqualTo(tokens);
+	}
+
+	@Test
+	void noImportsWithDirectives() {
+		List<Token> tokens = List.of(
 				new JavaKeywordToken(JavaKeyword.PACKAGE),
 				new WhitespaceToken(' '),
 				new IdentifierToken("test"),
 				new OperatorToken(';'),
 				new LineBreakToken("\n"),
 				new LineBreakToken("\n"),
+				new JcyoDirectiveStartToken("//#", CommentStyle.LINE),
+				new JavaKeywordToken(JavaKeyword.IF),
+				new WhitespaceToken(' '),
+				new JavaKeywordToken(JavaKeyword.FALSE),
+				new LineBreakToken("\n"),
+				new WhitespaceToken('\t'),
 				new JavaKeywordToken(JavaKeyword.CLASS),
 				new WhitespaceToken(' '),
 				new IdentifierToken("Test"),
 				new OperatorToken('{'),
-				new OperatorToken('}')
-		));
+				new LineBreakToken("\n"),
+				new WhitespaceToken('\t'),
+				new PlainJavaCommentToken("// This is a test\n", CommentStyle.LINE, false),
+				new WhitespaceToken('\t'),
+				new JavaKeywordToken(JavaKeyword.IF),
+				new WhitespaceToken(' '),
+				new JavaKeywordToken(JavaKeyword.TRUE),
+				new LineBreakToken("\n"),
+				new WhitespaceToken('\t'),
+				new WhitespaceToken('\t'),
+				new PlainJavaCommentToken("// This another comment\n", CommentStyle.LINE, false),
+				new WhitespaceToken('\t'),
+				new WhitespaceToken('\t'),
+				new JcyoDirectiveStartToken("//#", CommentStyle.LINE),
+				new JavaKeywordToken(JavaKeyword.ELSE),
+				new LineBreakToken("\n"),
+				new WhitespaceToken('\t'),
+				new WhitespaceToken('\t'),
+				new PlainJavaCommentToken("// else branch\n", CommentStyle.LINE, false),
+				new WhitespaceToken('\t'),
+				new WhitespaceToken('\t'),
+				new JcyoDirectiveStartToken("//#", CommentStyle.LINE),
+				new IdentifierToken("end"),
+				new LineBreakToken("\n"),
+				new WhitespaceToken('\t'),
+				new OperatorToken('}'),
+				new LineBreakToken("\n"),
+				new JcyoDirectiveStartToken("//#", CommentStyle.LINE),
+				new IdentifierToken("end"),
+				new LineBreakToken("\n")
+		);
+
+		var result = reorderer.apply(PeekableTokenStream.from(TokenStream.from(tokens)));
+		assertThat(result.stream().toList()).isEqualTo(tokens);
 	}
 }
