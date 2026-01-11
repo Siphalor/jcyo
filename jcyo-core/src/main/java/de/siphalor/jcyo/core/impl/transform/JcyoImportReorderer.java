@@ -60,6 +60,9 @@ public class JcyoImportReorderer {
 			if (!section.tokens().isEmpty()) {
 				tokenStreams.add(Stream.of(LineBreakToken.defaultInstance()));
 			}
+			if (sectionProcessResult.pendingWhitespace() != null) {
+				tokenStreams.add(sectionProcessResult.pendingWhitespace().stream());
+			}
 			tokenStreams.add(input.stream());
 		}
 		return TokenStream.from(tokenStreams.stream().flatMap(Function.identity()).iterator());
@@ -70,10 +73,14 @@ public class JcyoImportReorderer {
 			JcyoDirective startDirective,
 			TokenBuffer buffer
 	) {
-		SectionProcessResult sectionProcessResult = processSection(input);
-
 		var sectionBuilder = new SectionBuilder(buffer);
+
+		SectionProcessResult sectionProcessResult = processSection(input);
 		sectionBuilder.append(sectionProcessResult.section);
+
+		if (sectionProcessResult.pendingWhitespace() != null) {
+			sectionProcessResult.pendingWhitespace().stream().forEach(sectionBuilder.buffer()::pushToken);
+		}
 
 		if (sectionProcessResult.endDirective != null) {
 			if (sectionProcessResult.endDirective.isBlockBegin()) {
@@ -82,42 +89,50 @@ public class JcyoImportReorderer {
 						sectionProcessResult.endDirective,
 						new TokenBuffer()
 				);
-
 				sectionBuilder.append(sibling);
 			}
 		} else {
-			Token token;
-			while (true) {
-				token = input.peekToken();
-
-				if (token instanceof EofToken) {
-					break;
-				} else if (token instanceof JcyoDirectiveStartToken) {
-					var directiveBuffer = new TokenBuffer();
-					var directive = new DirectiveParser(directiveBuffer.copying(input)).nextDirective();
-					directiveBuffer.finish();
-					directiveBuffer.stream().forEach(sectionBuilder.buffer::pushToken);
-
-					if (directive.ends(startDirective)) {
-						if (directive.isBlockBegin()) {
-							Section sibling = processBlockDirectiveSection(
-									input,
-									directive,
-									new TokenBuffer()
-							);
-							sectionBuilder.append(sibling);
-						}
-						break;
-					}
-					// TODO: handle nested directives in this situation
-				} else {
-					sectionBuilder.buffer.pushToken(input.nextToken());
-				}
+			var endingDirective = chompToEndingDirective(input, buffer, startDirective);
+			if (endingDirective != null && endingDirective.isBlockBegin()) {
+				Section sibling = processBlockDirectiveSection(
+						input,
+						endingDirective,
+						new TokenBuffer()
+				);
+				sectionBuilder.append(sibling);
 			}
 		}
 
-		sectionBuilder.buffer.pushToken(EofToken.instance());
 		return sectionBuilder.build();
+	}
+
+	private @Nullable JcyoDirective chompToEndingDirective(
+			PeekableTokenStream input,
+			TokenBuffer buffer,
+			JcyoDirective startDirective
+	) {
+		Deque<JcyoDirective> directiveStack = new ArrayDeque<>();
+		directiveStack.push(startDirective);
+		while (true) {
+			Token token = input.peekToken();
+
+			if (token instanceof EofToken) {
+				return null;
+			} else if (token instanceof JcyoDirectiveStartToken) {
+				var directive = new DirectiveParser(buffer.copying(input)).nextDirective();
+				if (directive.ends(Objects.requireNonNull(directiveStack.peek()))) {
+					directiveStack.pop();
+					if (directiveStack.isEmpty()) {
+						return directive;
+					}
+				}
+				if (directive.isBlockBegin()) {
+					directiveStack.push(directive);
+				}
+			} else {
+				buffer.pushToken(input.nextToken());
+			}
+		}
 	}
 
 	private SectionProcessResult processSection(PeekableTokenStream input) {
@@ -131,13 +146,15 @@ public class JcyoImportReorderer {
 			token = input.peekToken();
 			switch (token) {
 				case JavaKeywordToken(JavaKeyword keyword) when keyword == JavaKeyword.IMPORT:
+					endBuffer.clear();
 					elements.add(parseImport(input));
 					break;
-				case WhitespaceToken _, LineBreakToken _:
+				case LineBreakToken _:
+					endBuffer.clear();
 					input.nextToken();
 					break;
-				case JavaKeywordToken(JavaKeyword keyword) when keyword == JavaKeyword.PACKAGE:
-					input.nextToken();
+				case WhitespaceToken _:
+					endBuffer.pushToken(input.nextToken());
 					break;
 				case JcyoDirectiveStartToken _:
 					JcyoDirective directive = new DirectiveParser(endBuffer.copying(input)).nextDirective();
@@ -172,12 +189,16 @@ public class JcyoImportReorderer {
 
 		var resultTokens = orderAndRenderElements(elements);
 
-		if (!endBuffer.isEmpty()) {
+		if (endDirective != null) {
 			endBuffer.finish();
 			endBuffer.stream().forEach(resultTokens::add);
+			return new SectionProcessResult(new Section(resultTokens, firstImport, lastImport), endDirective, null);
+		} else if (!endBuffer.isEmpty()) {
+			endBuffer.finish();
+			return new SectionProcessResult(new Section(resultTokens, firstImport, lastImport), null, endBuffer);
+		} else {
+			return new SectionProcessResult(new Section(resultTokens, firstImport, lastImport), null, null);
 		}
-
-		return new SectionProcessResult(new Section(resultTokens, firstImport, lastImport), endDirective);
 	}
 
 	private SequencedCollection<Token> orderAndRenderElements(SequencedCollection<Element> elements) {
@@ -212,14 +233,14 @@ public class JcyoImportReorderer {
 					result.add(LineBreakToken.defaultInstance());
 				}
 				case Section section -> {
-					if (section.firstImport == null) {
-						result.add(LineBreakToken.defaultInstance());
-					} else if (lastOrderIndex >= 0 && section.firstImport.orderIndex() != lastOrderIndex) {
-						if (
-								importOrder.elements().subList(lastOrderIndex, section.firstImport.orderIndex())
-										.contains(ImportOrderElement.blankLine())
-						) {
-							result.add(LineBreakToken.defaultInstance());
+					if (section.firstImport != null) {
+						if (lastOrderIndex >= 0 && section.firstImport.orderIndex() != lastOrderIndex) {
+							if (
+									importOrder.elements().subList(lastOrderIndex, section.firstImport.orderIndex())
+											.contains(ImportOrderElement.blankLine())
+							) {
+								result.add(LineBreakToken.defaultInstance());
+							}
 						}
 					}
 					result.addAll(section.tokens());
@@ -294,7 +315,11 @@ public class JcyoImportReorderer {
 				.orElse(prefixOrderElements.size());
 	}
 
-	record SectionProcessResult(Section section, @Nullable JcyoDirective endDirective) {}
+	record SectionProcessResult(
+			Section section,
+			@Nullable JcyoDirective endDirective,
+			@Nullable TokenStream pendingWhitespace
+	) {}
 
 	sealed interface Element extends Comparable<Element> {
 		@Override

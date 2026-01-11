@@ -377,6 +377,7 @@ class JcyoImportReordererTest {
 				new WhitespaceToken('\t'),
 				new PlainJavaCommentToken("// This is a test\n", CommentStyle.LINE, false),
 				new WhitespaceToken('\t'),
+				new JcyoDirectiveStartToken("//#", CommentStyle.LINE),
 				new JavaKeywordToken(JavaKeyword.IF),
 				new WhitespaceToken(' '),
 				new JavaKeywordToken(JavaKeyword.TRUE),
