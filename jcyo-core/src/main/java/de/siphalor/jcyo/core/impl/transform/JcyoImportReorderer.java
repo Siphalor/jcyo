@@ -242,6 +242,8 @@ public class JcyoImportReorderer {
 								result.add(LineBreakToken.defaultInstance());
 							}
 						}
+					} else if (lastOrderIndex >= 0) {
+						result.add(LineBreakToken.defaultInstance());
 					}
 					result.addAll(section.tokens());
 
