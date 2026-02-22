@@ -14,9 +14,11 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.SkipWhenEmpty
 import org.gradle.api.tasks.TaskAction
 
 abstract class JcyoTask : DefaultTask() {
+	@get:SkipWhenEmpty
 	@get:InputDirectory
 	abstract val inputDirectory: DirectoryProperty
 
