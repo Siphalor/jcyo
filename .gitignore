@@ -31,8 +31,8 @@ gen
 
 # Gradle
 .gradle
-**/build/
-!src/**/build/
+/build/
+*/build/
 
 # Ignore Gradle GUI config
 gradle-app.setting

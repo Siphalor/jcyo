@@ -1,11 +1,17 @@
 plugins {
 	`java-gradle-plugin`
 	alias(libs.plugins.kotlin.jvm)
+	id("de.siphalor.jcyo.base")
 	id("de.siphalor.jcyo.publishing")
 }
 
 group = rootProject.group
 version = rootProject.version
+
+moduleProperties {
+	name = "JCYO Gradle plugin"
+	description = "Gradle plugin for JCYO (comment-based preprocessor for Java)"
+}
 
 repositories {
 	mavenCentral()

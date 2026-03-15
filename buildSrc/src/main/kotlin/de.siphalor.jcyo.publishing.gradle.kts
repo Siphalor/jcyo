@@ -1,5 +1,8 @@
+import de.siphalor.jcyo.build.ModuleProperties
+
 plugins {
 	`maven-publish`
+	id("de.siphalor.jcyo.base")
 }
 
 val siphalorMavenUser = project.property("siphalor.maven.user") as String?
@@ -21,11 +24,13 @@ publishing {
 	publications.all {
 		if (this is MavenPublication) {
 			pom {
-				name = project.property("module.name") as String
-				description = project.property("module.description") as String
-				url = project.property("git.url") as String
-				scm {
+				extensions.getByType<ModuleProperties>().let { module ->
+					name = module.name
+					description = module.description
 					url = project.property("git.url") as String
+					scm {
+						url = project.property("git.url") as String
+					}
 				}
 			}
 		}
