@@ -187,7 +187,7 @@ public class JcyoImportReorderer {
 				.map(Import.class::cast)
 				.orElse(null);
 
-		var resultTokens = orderAndRenderElements(elements);
+		var resultTokens = renderElements(elements);
 
 		if (endDirective != null) {
 			endBuffer.finish();
@@ -201,7 +201,7 @@ public class JcyoImportReorderer {
 		}
 	}
 
-	private SequencedCollection<Token> orderAndRenderElements(SequencedCollection<Element> elements) {
+	private SequencedCollection<Token> renderElements(SequencedCollection<Element> elements) {
 		List<Token> result = new ArrayList<>();
 
 		int lastOrderIndex = -Integer.MAX_VALUE;
@@ -210,7 +210,9 @@ public class JcyoImportReorderer {
 		for (Element element : elements) {
 			switch (element) {
 				case Import _import -> {
-					if (lastOrderIndex >= 0 && _import.orderIndex() != lastOrderIndex) {
+					// If the current import has a lower order index than the last processed import
+					// then this was caused by sectioning, we should not insert a blank line.
+					if (lastOrderIndex >= 0 && _import.orderIndex() > lastOrderIndex) {
 						if (
 								importOrder.elements().subList(lastOrderIndex, _import.orderIndex())
 										.contains(ImportOrderElement.blankLine())

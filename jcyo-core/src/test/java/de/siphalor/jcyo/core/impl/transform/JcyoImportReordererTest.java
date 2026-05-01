@@ -335,6 +335,60 @@ class JcyoImportReordererTest {
 	}
 
 	@Test
+	void unclearDirective() {
+		List<Token> tokens = List.of(
+				new JavaKeywordToken(JavaKeyword.IMPORT),
+				new WhitespaceToken(' '),
+				new IdentifierToken("com"),
+				new OperatorToken('.'),
+				new IdentifierToken("example"),
+				new OperatorToken('.'),
+				new IdentifierToken("a"),
+				new OperatorToken(';'),
+				new LineBreakToken("\n"),
+				new JcyoDirectiveStartToken("//#", CommentStyle.LINE),
+				new JavaKeywordToken(JavaKeyword.IF),
+				new WhitespaceToken(' '),
+				new JavaKeywordToken(JavaKeyword.TRUE),
+				new LineBreakToken("\n"),
+				new JavaKeywordToken(JavaKeyword.IMPORT),
+				new WhitespaceToken(' '),
+				new IdentifierToken("com"),
+				new OperatorToken('.'),
+				new IdentifierToken("example"),
+				new OperatorToken('.'),
+				new IdentifierToken("b"),
+				new OperatorToken(';'),
+				new LineBreakToken("\n"),
+				new JcyoDirectiveStartToken("//#", CommentStyle.LINE),
+				new JavaKeywordToken(JavaKeyword.ELSE),
+				new LineBreakToken("\n"),
+				new JavaKeywordToken(JavaKeyword.IMPORT),
+				new WhitespaceToken(' '),
+				new IdentifierToken("org"),
+				new OperatorToken('.'),
+				new IdentifierToken("example"),
+				new OperatorToken(';'),
+				new LineBreakToken("\n"),
+				new JcyoDirectiveStartToken("//#", CommentStyle.LINE),
+				new IdentifierToken("end"),
+				new LineBreakToken("\n"),
+				new JavaKeywordToken(JavaKeyword.IMPORT),
+				new WhitespaceToken(' '),
+				new IdentifierToken("com"),
+				new OperatorToken('.'),
+				new IdentifierToken("example"),
+				new OperatorToken('.'),
+				new IdentifierToken("c"),
+				new OperatorToken(';'),
+				new LineBreakToken("\n")
+		);
+
+		var result = reorderer.apply(PeekableTokenStream.from(TokenStream.from(tokens)));
+		assertThat(result.stream().toList()).isEqualTo(tokens);
+	}
+
+	@Test
 	void noImports() {
 		List<Token> tokens = List.of(
 				new JavaKeywordToken(JavaKeyword.PACKAGE),

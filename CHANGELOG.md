@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Remove incorrect `PathSensitivity` annotation on output directory
+- Fixed an error with import ordering sections that don't fit neatly into the ordering
 
 ## [0.6.2] - 2026-03-15
 
