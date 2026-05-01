@@ -35,7 +35,6 @@ abstract class JcyoTask : DefaultTask() {
 	abstract val importOrder: ListProperty<String>
 
 	@get:OutputDirectory
-	@get:PathSensitive(PathSensitivity.RELATIVE)
 	@get:Optional
 	abstract val cleanOutputDirectory: DirectoryProperty
 
