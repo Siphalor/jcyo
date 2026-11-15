@@ -1,9 +1,9 @@
-package de.siphalor.jcyo.core.impl;
+package de.siphalor.jcyo.core.impl.transform;
 
 import de.siphalor.jcyo.core.api.JcyoOptions;
+import de.siphalor.jcyo.core.impl.CommentStyle;
 import de.siphalor.jcyo.core.impl.stream.TokenStream;
 import de.siphalor.jcyo.core.impl.token.*;
-import de.siphalor.jcyo.core.impl.transform.GeneratedAndDisabledTokenRemover;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;

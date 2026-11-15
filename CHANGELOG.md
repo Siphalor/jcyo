@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Improve `toString` output of `LineBreakToken`.
 
+### Fixed
+
+- Fix mis-indentations in some specific cases with nested directives.
+
 ## [0.6.3] - 2026-05-01
 
 ### Fixed

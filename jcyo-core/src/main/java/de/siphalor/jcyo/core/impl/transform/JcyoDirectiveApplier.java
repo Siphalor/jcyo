@@ -39,7 +39,11 @@ public class JcyoDirectiveApplier {
 		public Token nextToken() {
 			while (true) {
 				if (!buffer.isEmpty()) {
-					return buffer.nextToken();
+					Token token = buffer.nextToken();
+					if (token instanceof LineBreakToken) {
+						clearIndent();
+					}
+					return token;
 				}
 
 				switch (input.peekToken()) {
