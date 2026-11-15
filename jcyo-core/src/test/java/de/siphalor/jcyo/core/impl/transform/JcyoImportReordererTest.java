@@ -329,7 +329,6 @@ class JcyoImportReordererTest {
 				new IdentifierToken("requireNonNull"),
 				new OperatorToken(';'),
 				new LineBreakToken("\n"),
-				new LineBreakToken("\n"),
 				new PlainJavaCommentToken("// Ending this file", CommentStyle.LINE, false)
 		));
 	}
@@ -381,6 +380,58 @@ class JcyoImportReordererTest {
 				new OperatorToken('.'),
 				new IdentifierToken("c"),
 				new OperatorToken(';'),
+				new LineBreakToken("\n")
+		);
+
+		var result = reorderer.apply(PeekableTokenStream.from(TokenStream.from(tokens)));
+		assertThat(result.stream().toList()).isEqualTo(tokens);
+	}
+
+	@Test
+	void directiveAfterImports() {
+		List<Token> tokens = List.of(
+				new JavaKeywordToken(JavaKeyword.IMPORT),
+				new WhitespaceToken(' '),
+				new IdentifierToken("a"),
+				new OperatorToken('.'),
+				new IdentifierToken("b"),
+				new OperatorToken('.'),
+				new IdentifierToken("Example"),
+				new OperatorToken(';'),
+				new LineBreakToken("\n"),
+				new LineBreakToken("\n"),
+				new JcyoDirectiveStartToken("//#", CommentStyle.LINE),
+				new WhitespaceToken(' '),
+				new JavaKeywordToken(JavaKeyword.IF),
+				new WhitespaceToken(' '),
+				new JavaKeywordToken(JavaKeyword.TRUE),
+				new LineBreakToken("\n"),
+				new OperatorToken('@'),
+				new IdentifierToken("Example"),
+				new OperatorToken('('),
+				new NumberLiteralToken("1"),
+				new OperatorToken(')'),
+				new LineBreakToken("\n"),
+				new JcyoDirectiveStartToken("//#", CommentStyle.LINE),
+				new WhitespaceToken(' '),
+				new JavaKeywordToken(JavaKeyword.ELSE),
+				new LineBreakToken("\n"),
+				new OperatorToken('@'),
+				new IdentifierToken("Example"),
+				new OperatorToken('('),
+				new NumberLiteralToken("2"),
+				new OperatorToken(')'),
+				new LineBreakToken("\n"),
+				new JcyoDirectiveStartToken("//#", CommentStyle.LINE),
+				new WhitespaceToken(' '),
+				new IdentifierToken("end"),
+				new LineBreakToken("\n"),
+				new JavaKeywordToken(JavaKeyword.CLASS),
+				new WhitespaceToken(' '),
+				new IdentifierToken("Klass"),
+				new WhitespaceToken(' '),
+				new OperatorToken('{'),
+				new OperatorToken('}'),
 				new LineBreakToken("\n")
 		);
 

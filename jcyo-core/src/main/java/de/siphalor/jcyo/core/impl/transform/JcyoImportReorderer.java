@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.jspecify.annotations.Nullable;
 
+import javax.sound.sampled.Line;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Stream;
@@ -57,11 +58,10 @@ public class JcyoImportReorderer {
 		tokenStreams.add(section.tokens().stream());
 
 		if (!(input.peekToken() instanceof EofToken)) {
-			if (!section.tokens().isEmpty()) {
-				tokenStreams.add(Stream.of(LineBreakToken.defaultInstance()));
-			}
 			if (sectionProcessResult.pendingWhitespace() != null) {
 				tokenStreams.add(sectionProcessResult.pendingWhitespace().stream());
+			} else if (!section.tokens().isEmpty()) {
+				tokenStreams.add(Stream.of(LineBreakToken.defaultInstance()));
 			}
 			tokenStreams.add(input.stream());
 		}
@@ -149,14 +149,11 @@ public class JcyoImportReorderer {
 					endBuffer.clear();
 					elements.add(parseImport(input));
 					break;
-				case LineBreakToken _:
-					endBuffer.clear();
-					input.nextToken();
-					break;
-				case WhitespaceToken _:
+				case LineBreakToken _, WhitespaceToken _:
 					endBuffer.pushToken(input.nextToken());
 					break;
 				case JcyoDirectiveStartToken _:
+					endBuffer.clear();
 					JcyoDirective directive = new DirectiveParser(endBuffer.copying(input)).nextDirective();
 					if (directive.isBlockEnd()) {
 						endDirective = directive;
@@ -165,6 +162,9 @@ public class JcyoImportReorderer {
 						Section section = processBlockDirectiveSection(input, directive, endBuffer);
 						elements.add(section);
 						endBuffer = new TokenBuffer();
+					} else {
+						elements.add(new Other(endBuffer.stream().toList()));
+						endBuffer.clear();
 					}
 					break;
 				default:
@@ -180,7 +180,7 @@ public class JcyoImportReorderer {
 				.map(Import.class::cast)
 				.orElse(null);
 
-		var lastImport = elements.reversed()
+		var lastImport = firstImport == null ? null : elements.reversed()
 				.stream()
 				.filter(element -> element instanceof JcyoImportReorderer.Import)
 				.findFirst()
@@ -189,15 +189,15 @@ public class JcyoImportReorderer {
 
 		var resultTokens = renderElements(elements);
 
+		endBuffer.finish();
 		if (endDirective != null) {
-			endBuffer.finish();
+			// we're exiting because of an end directive, meaning the directive tokens are in the end buffer
 			endBuffer.stream().forEach(resultTokens::add);
 			return new SectionProcessResult(new Section(resultTokens, firstImport, lastImport), endDirective, null);
-		} else if (!endBuffer.isEmpty()) {
-			endBuffer.finish();
-			return new SectionProcessResult(new Section(resultTokens, firstImport, lastImport), null, endBuffer);
 		} else {
-			return new SectionProcessResult(new Section(resultTokens, firstImport, lastImport), null, null);
+			// we're exiting because we ran into non-import elements, the end buffer will contain pending whitespace
+			// for the non-import code, that should be retained exactly as-is.
+			return new SectionProcessResult(new Section(resultTokens, firstImport, lastImport), null, endBuffer);
 		}
 	}
 
@@ -255,6 +255,7 @@ public class JcyoImportReorderer {
 
 					lastImportPath = null;
 				}
+				case Other other -> result.addAll(other.tokens());
 			}
 		}
 
@@ -272,6 +273,22 @@ public class JcyoImportReorderer {
 				break;
 			} else {
 				importTokens.add(input.nextToken());
+			}
+		}
+
+		// We're chomping a whitespace until a line break here,
+		// because we assume that whitespace after an import is never an explicit choice.
+		// The line break will be regenerated in the output logic,
+		// whitespace in front of it is treated as a formatting error and will be discarded.
+		while (true) {
+			Token token = input.peekToken();
+			if (token instanceof WhitespaceToken) {
+				input.nextToken();
+			} else if (token instanceof LineBreakToken) {
+				input.nextToken();
+				break;
+			} else {
+				break;
 			}
 		}
 
@@ -350,6 +367,7 @@ public class JcyoImportReorderer {
 		return switch (element) {
 			case Import _import -> Optional.of(_import);
 			case Section section -> Optional.ofNullable(section.firstImport);
+			case Other _ -> Optional.empty();
 		};
 	}
 
@@ -357,6 +375,9 @@ public class JcyoImportReorderer {
 	}
 
 	record Section(SequencedCollection<Token> tokens, @Nullable Import firstImport, @Nullable Import lastImport) implements Element {
+	}
+
+	record Other(SequencedCollection<Token> tokens) implements Element {
 	}
 
 	@RequiredArgsConstructor

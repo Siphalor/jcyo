@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Fix mis-indentations in some specific cases with nested directives.
+- Improve handling of line breaks and whitespace after the import section.
 
 ## [0.6.3] - 2026-05-01
 
